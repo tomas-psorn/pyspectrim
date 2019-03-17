@@ -28,9 +28,11 @@ class FileH5():
 
 class GroupH5():
     def __init__(self, fileH5, app, item):
+        self.group = item;
         self.absPath = fileH5.path# get path without extension
         self.id = self.absPath.rsplit('.',1)[0]  + item.name
         self.parent = self.absPath.rsplit('.',1)[0] + item.parent.name
+        self.children = []
 
         if item.__class__.__name__ == "File":
             app.filesTab.filesTree.insert("","end",self.id,text=basename(fileH5.path), image=app.icons['folder'])
@@ -39,12 +41,13 @@ class GroupH5():
 
         for key in item.keys():
             if item[key].__class__.__name__ == "Group":
-                GroupH5(fileH5,app,item[key])
+                self.children.append(GroupH5(fileH5,app,item[key]))
             elif item[key].__class__.__name__ == "Dataset":
-                DatasetH5(fileH5,app, item[key])
+                self.children.append(DatasetH5(fileH5,app, item[key]))
 
 class DatasetH5():
     def __init__(self, fileH5, app, item):
+        self.dataset = item
         self.absPath = fileH5.path # get path without extension
         self.id = self.absPath.rsplit('.',1)[0] + item.name
         self.parent = self.absPath.rsplit('.',1)[0] + item.parent.name

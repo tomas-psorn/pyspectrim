@@ -4,9 +4,12 @@ from tkinter import ttk
 
 
 class ImagesTab():
-    def __init__(self, pyspectrim):
-        self.frame = tk.Frame(pyspectrim.contentTabs)
-        pyspectrim.contentTabs.add(self.frame, text="Images")
+
+    imagesList = []
+
+    def __init__(self, app):
+        self.frame = tk.Frame(app.contentTabs)
+        app.contentTabs.add(self.frame, text="Images")
 
         self.imagesTree = ttk.Treeview(self.frame)
         self.imagesTree.config(columns=('size'))
@@ -19,6 +22,9 @@ class ImagesTab():
 
         self.imagesTree.pack()
 
-    def insertImage(self):
-        self.imagesTree.insert('','0','item1', text='Image1')
-        self.imagesTree.set('item1','size','128x128x25')
+    def insertImage(self, datasetH5):
+        self.imagesTree.insert('','end',datasetH5.id, text=datasetH5.name)
+        self.imagesList.append(datasetH5);
+        print(dir(datasetH5))
+
+        # self.imagesTree.set('item1','size','128x128x25')
