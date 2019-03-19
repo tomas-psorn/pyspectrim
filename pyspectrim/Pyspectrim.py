@@ -1,15 +1,10 @@
 from pyspectrim.ImagesTab import ImagesTab
 from pyspectrim.FilesTab import FilesTab
+from pyspectrim.ImagePanel import ImagePanel
 
 import tkinter as tk
 from tkinter import ttk
 from tkinter import Menu
-
-
-import matplotlib
-matplotlib.use("TkAgg")
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
 
 
 
@@ -29,7 +24,7 @@ class PySpectrim():
 
         self.createPositionTab()
 
-        self.createImagePanel()
+        self.imagePanel = ImagePanel(self)
 
         self.main_menu = Menu(self.root)
         self.root.config(menu=self.main_menu)
@@ -59,13 +54,6 @@ class PySpectrim():
         self.positionTab = tk.Frame(self.contextTabs)
         self.contextTabs.add(self.positionTab, text="Position")
 
-    def createImagePanel(self):
-        f = Figure(figsize=(5,5), dpi=100)
-        a = f.add_subplot(111)
-        a.plot([1,2,3,4,5,6,7,8],[5,6,1,3,8,9,3,5])
-        canvas = FigureCanvasTkAgg(f, self.root)
-        canvas.get_tk_widget().grid(column=0, row = 0)
-        canvas._tkcanvas.grid(column=0, row = 0)
 
 
 if __name__ == "__main__":

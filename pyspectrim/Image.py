@@ -11,5 +11,7 @@ class Image():
         self.data = np.squeeze(self.data)
         print(self.data.shape)
 
+        self.frame = self.data[:,:,12]
+
 
 

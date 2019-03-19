@@ -13,7 +13,8 @@ class ImagesTab():
 
     def __init__(self, app):
         self.frame = tk.Frame(app.contentTabs)
-        app.contentTabs.add(self.frame, text="Images")
+        self.app = app;
+        self.app.contentTabs.add(self.frame, text="Images")
 
         self.imagesTree = ttk.Treeview(self.frame)
         self.imagesTree.config(columns=('size'))
@@ -29,6 +30,7 @@ class ImagesTab():
     def insertImage(self, dataset):
         self.imagesList.append(Image(dataset))
         self.imagesTree.insert('','end', getObjectId(dataset), text=dataset.name)
+        self.app.imagePanel.draw()
 
 
         # self.imagesTree.set('item1','size','128x128x25')
