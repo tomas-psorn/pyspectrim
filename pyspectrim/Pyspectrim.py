@@ -55,7 +55,6 @@ class PySpectrim():
         self.icons['folder'] = tk.PhotoImage("icons/folder.gif").subsample(10,10)
 
 
-
     def createPositionTab(self):
         self.positionTab = tk.Frame(self.contextTabs)
         self.contextTabs.add(self.positionTab, text="Position")

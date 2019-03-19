@@ -1,3 +1,7 @@
+from pyspectrim.FilesTab import getObjectId
+
+from pyspectrim.Image import Image
+
 import tkinter as tk
 from tkinter import ttk
 
@@ -22,9 +26,9 @@ class ImagesTab():
 
         self.imagesTree.pack()
 
-    def insertImage(self, datasetH5):
-        self.imagesTree.insert('','end',datasetH5.id, text=datasetH5.name)
-        self.imagesList.append(datasetH5);
-        print(dir(datasetH5))
+    def insertImage(self, dataset):
+        self.imagesList.append(Image(dataset))
+        self.imagesTree.insert('','end', getObjectId(dataset), text=dataset.name)
+
 
         # self.imagesTree.set('item1','size','128x128x25')
