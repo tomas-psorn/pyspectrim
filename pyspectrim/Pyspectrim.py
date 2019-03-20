@@ -1,6 +1,7 @@
 from pyspectrim.ImagesTab import ImagesTab
 from pyspectrim.FilesTab import FilesTab
 from pyspectrim.ImagePanel import ImagePanel
+from pyspectrim.PositionTab import PositionTab
 
 import tkinter as tk
 from tkinter import ttk
@@ -19,13 +20,17 @@ class PySpectrim():
         self.contentTabs.grid(column = 0, row = 1)
         self.contextTabs.grid(column = 1, row = 1)
 
+        # Content tabs
         self.filesTab = FilesTab(self)
         self.imagesTab = ImagesTab(self)
 
-        self.createPositionTab()
+        # Context tabs
+        self.positionTab = PositionTab(self)
 
+        # Vieving
         self.imagePanel = ImagePanel(self)
 
+        # Menus
         self.main_menu = Menu(self.root)
         self.root.config(menu=self.main_menu)
         self.file_menu = Menu(self.main_menu, tearoff=0)

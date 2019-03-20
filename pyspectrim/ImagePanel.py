@@ -18,5 +18,6 @@ class ImagePanel():
         self.canvas._tkcanvas.grid(column=0, row=0)
 
     def draw(self):
-        frame = self.app.imagesTab.imagesList[0]
-        self.a.imshow(frame)
+        image = self.app.imagesTab.imagesList[0]
+        self.a.imshow(image.getFrame())
+        self.canvas.draw()

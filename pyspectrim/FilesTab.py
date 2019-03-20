@@ -58,6 +58,7 @@ class FilesTab:
         code = self.filesTree.selection()[0]
         self.app.imagesTab.insertImage(self.GetDataset(code))
 
+
     def GetDataset(self, code):
         for _file in self.filesList:
             pathNoExtension = _file.filename.rsplit('.',1)[0]
