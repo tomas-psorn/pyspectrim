@@ -14,20 +14,45 @@ class Image():
         self.data = np.squeeze(self.data)
 
         self.dim_size = self.data.shape
+        self.ndim = len(self.dim_size)
+        self.dim_label = ['x','y','z']
 
-        self.pos_ind = [ int(self.dim_size[0]/2), int(self.dim_size[1]/2), int(self.dim_size[2]/2) ]
-        self.from_ind = [0, 0, 0]
-        self.to_ind = [self.dim_size[0], self.dim_size[1], self.dim_size[2]]
+        self.dim_from = [0,0,0]
+        self.dim_from_phys = [0.0, 0.0, 0.0]
+
+        self.dim_to = [self.dim_size[0], self.dim_size[1], self.dim_size[2]]
+        self.dim_to_phys = [25.6,25.6, 20.0]
+
+        self.dim_spacing = [0.1, 0.1, 0.5]
+
+        self.dim_pos = [ int(self.dim_size[0]/2), int(self.dim_size[1]/2), int(self.dim_size[2]/2) ]
 
         self.visibility = 1.0
 
     def getFrame(self):
 
-        frame = self.data[:,:,self.pos_ind[2]]
+        frame = self.data[:,:,self.dim_pos[2]]
         frame = 255*(frame - np.amin(frame))/np.amax(frame)
         frame = frame.astype(int)
 
         return frame
+
+    def incrementPosition(self, dim_order):
+        if self.dim_pos[dim_order] < self.dim_to[dim_order] - 1:
+            self.dim_pos[dim_order] += 1
+
+    def decrementPosition(self, dim_order):
+        if self.dim_pos[dim_order] > self.dim_from[dim_order]:
+            self.dim_pos[dim_order] -= 1
+
+    def posToMax(self, dim_order):
+        self.dim_pos[dim_order] = self.dim_to[dim_order] - 1
+
+    def posToMin(self, dim_order):
+        self.dim_pos[dim_order] = self.dim_from[dim_order]
+
+
+
 
 
 
