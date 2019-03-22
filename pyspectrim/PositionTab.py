@@ -19,6 +19,10 @@ class PositionTab():
         for i in range(0, image.ndim):
           self.sliders.append(Slider(self.positionTab, self.app, image=image, dim_order = i))
 
+    def clean(self):
+        for slider in self.sliders:
+            slider.destroy_()
+        self.sliders = []
 
 class Slider(tk.Scale):
 
@@ -121,3 +125,11 @@ class Slider(tk.Scale):
 
     def setIndexed(self):
         print("Ind")
+
+    def destroy_(self):
+        self.layout.destroy()
+        # self.leftButton.destroy()
+        # self.rightButton.destroy()
+        # self.beginButton.destroy()
+        # self.endButton.destroy()
+        # self.destroy()

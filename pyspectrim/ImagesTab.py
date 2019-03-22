@@ -1,10 +1,7 @@
 from pyspectrim.FilesTab import getObjectId
-
 from pyspectrim.Image import Image
-
 import tkinter as tk
 from tkinter import ttk
-
 
 
 class ImagesTab():
@@ -28,6 +25,12 @@ class ImagesTab():
 
         self.imagesTree.bind("<Button-1>", self.OnClick)
 
+
+        self.imagesTree.popup_menu = tk.Menu(self.imagesTree, tearoff=0)
+        self.imagesTree.popup_menu.add_command(label="Close", command=self.close)
+        self.imagesTree.bind("<Button-3>", self.popup)
+
+
         self.imagesTree.pack()
 
     def insertImage(self, dataset):
@@ -43,7 +46,13 @@ class ImagesTab():
             if code == image.tree_id:
                 self.setContext(image)
 
+    def close(self):
+        code = self.imagesTree.selection()[0]
+        self.app.positionTab.clean()
+        self.imagesTree.delete(code)
 
-
-
-        # self.imagesTree.set('item1','size','128x128x25')
+    def popup(self, event):
+        try:
+            self.imagesTree.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.imagesTree.popup_menu.grab_release()
