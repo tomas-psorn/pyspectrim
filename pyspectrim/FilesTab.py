@@ -1,11 +1,8 @@
-# from pyspectrim.FileH5 import FileH5
 from pyspectrim.File import File
 
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
-
-import h5py
 
 from os.path import basename
 
@@ -27,17 +24,19 @@ def getObjectName(object):
         return object.name
 
 
-class FilesTab:
+class FilesTab(tk.Frame):
 
     filesList = []
 
-    def __init__(self,app):
+    def __init__(self, contentTabs):
 
-        self.app = app
-        self.frame = tk.Frame(self.app.contentTabs)
-        self.app.contentTabs.add(self.frame, text="Files")
+        self.contentTabs = contentTabs
+        self.app = self.contentTabs.app
 
-        self.filesTree = ttk.Treeview(self.frame)
+        super().__init__(self.contentTabs)
+        self.contentTabs.add(self, text="Files")
+
+        self.filesTree = ttk.Treeview(self)
         self.filesTree.config(columns=('size'))
 
         self.filesTree.column('#0', width=150)
@@ -56,7 +55,15 @@ class FilesTab:
 
     def OnDoubleClick(self,event):
         code = self.filesTree.selection()[0]
-        self.app.imagesTab.insertImage(self.GetDataset(code))
+
+        # insert image
+        self.app.contentTabs.imagesTab.insertImage(self.GetDataset(code))
+
+        # Switch tab to images in content section
+        self.app.contentTabs.select(self.contentTabs.imagesTab)
+
+
+
 
 
     def GetDataset(self, code):
@@ -65,7 +72,7 @@ class FilesTab:
             pathIntra = code.replace(pathNoExtension,'')
 
             if pathNoExtension in code:
-                return _file.file[pathIntra];
+                return _file.file[pathIntra]
             else:
                 return -1
 

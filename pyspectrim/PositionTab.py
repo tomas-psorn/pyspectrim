@@ -3,23 +3,22 @@ from tkinter import ttk
 
 import time
 
-class PositionTab():
-    def __init__(self,app):
-        self.app = app
-        self.positionTab = tk.Frame(self.app.contextTabs)
-        self.app.contextTabs.add(self.positionTab, text="Position")
+class PositionTab(tk.Frame):
+    def __init__(self,contextTabs):
+        self.app = contextTabs.app
+        self.contextTabs = contextTabs
+
+        super().__init__(self.contextTabs)
+        self.contextTabs.add(self, text="Position")
 
         self.sliders = []
 
-        # self.xscale = Slider(self.positionTab, self.app, image='x', dim_order = 0)
-        # self.yscale = Slider(self.positionTab, self.app, label='y', dim_order = 1)
-        # self.zscale = Slider(self.positionTab, self.app, label='z', dim_order = 2)
 
-    def drawPosSliders(self, image):
+    def setPosSliders(self, image):
         for i in range(0, image.ndim):
-          self.sliders.append(Slider(self.positionTab, self.app, image=image, dim_order = i))
+          self.sliders.append(Slider(self, image=image, dim_order = i))
 
-    def clean(self):
+    def cleanPosSliders(self):
         for slider in self.sliders:
             slider.destroy_()
         self.sliders = []
@@ -28,18 +27,22 @@ class Slider(tk.Scale):
 
     def_length = 250
 
-    def __init__(self, tab, app, **kwargs):
+    def __init__(self, tab, **kwargs):
+
+        self.tab = tab
+        self.app = tab.app
+
         self.image = kwargs['image']
         self.dim_order = kwargs['dim_order']  # a position of dimension in dim lists
 
-        self.layout = tk.LabelFrame(tab, text=self.image.dim_label[self.dim_order])
+        self.layout = tk.LabelFrame(self.tab, text=self.image.dim_label[self.dim_order])
         # super(Slider,self).__init__(self.layout, orient=tk.HORIZONTAL, length = 284, from_=0, to=250)
         super().__init__(self.layout, orient=tk.HORIZONTAL, length = self.def_length, from_= self.image.dim_from[self.dim_order], to=self.image.dim_to[self.dim_order])
 
         # set initial position
         self.set(self.image.dim_pos[self.dim_order])
 
-        self.app = app
+
 
         # self.setLabel(kwargs['label'])
         self.bind("<Button-1>", self.callback)
@@ -88,28 +91,28 @@ class Slider(tk.Scale):
 
     def callback(self,event):
         # TODO
-        self.app.imagesTab.imagesList[0].pos_ind[2] = self.get()
-        self.app.imagePanel.draw()
+        self.app.contentTabs.imagesTab.imagesList[0].dim_pos[2] = self.get()
+        self.app.cinema.imagePanel.draw()
 
     def leftClick(self, event):
         self.set(self.get()-1)
         self.image.decrementPosition(self.dim_order)
-        self.app.imagePanel.draw()
+        self.app.cinema.imagePanel.draw()
 
     def rightClick(self, event):
         self.set(self.get()+1)
         self.image.incrementPosition(self.dim_order)
-        self.app.imagePanel.draw()
+        self.app.cinema.imagePanel.draw()
 
     def beginClick(self, event):
         self.set(self.cget('from'))
         self.image.posToMin(self.dim_order)
-        self.app.imagePanel.draw()
+        self.app.cinema.imagePanel.draw()
 
     def endClick(self, event):
         self.set(self.cget('to'))
         self.image.posToMax(self.dim_order)
-        self.app.imagePanel.draw()
+        self.app.cinema.imagePanel.draw()
 
     def playClick(self,event):
         for i in range(int(self.get()), int(self.cget('to'))):
@@ -128,8 +131,3 @@ class Slider(tk.Scale):
 
     def destroy_(self):
         self.layout.destroy()
-        # self.leftButton.destroy()
-        # self.rightButton.destroy()
-        # self.beginButton.destroy()
-        # self.endButton.destroy()
-        # self.destroy()

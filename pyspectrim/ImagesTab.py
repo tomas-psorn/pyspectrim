@@ -3,18 +3,31 @@ from pyspectrim.Image import Image
 import tkinter as tk
 from tkinter import ttk
 
+def getImageSizeStr(image):
 
-class ImagesTab():
+    sizeStr = ''
+
+    for dim in image.dim_size:
+        sizeStr += str(dim)
+        sizeStr += 'x'
+
+    return sizeStr[:-1]
+
+
+class ImagesTab(tk.Frame):
 
     imagesList = []
     imagesOnFocus = []
 
-    def __init__(self, app):
-        self.frame = tk.Frame(app.contentTabs)
-        self.app = app;
-        self.app.contentTabs.add(self.frame, text="Images")
+    def __init__(self, contentTabs):
 
-        self.imagesTree = ttk.Treeview(self.frame)
+        self.contentTabs = contentTabs
+        self.app = self.contentTabs.app
+
+        super().__init__(self.contentTabs)
+        self.contentTabs.add(self, text="Images")
+
+        self.imagesTree = ttk.Treeview(self)
         self.imagesTree.config(columns=('size'))
 
         self.imagesTree.column('#0', width=150)
@@ -27,32 +40,56 @@ class ImagesTab():
 
 
         self.imagesTree.popup_menu = tk.Menu(self.imagesTree, tearoff=0)
-        self.imagesTree.popup_menu.add_command(label="Close", command=self.close)
+        self.imagesTree.popup_menu.add_command(label="Close", command=self.closeImage)
         self.imagesTree.bind("<Button-3>", self.popup)
-
 
         self.imagesTree.pack()
 
     def insertImage(self, dataset):
+
+        # Insert new image to images list
         self.imagesList.append(Image(dataset))
-        self.imagesTree.insert('','end', getObjectId(dataset), text=dataset.name)
-        self.app.positionTab.drawPosSliders(self.imagesList[-1])
-        self.app.imagePanel.draw()
+
+        # Insert new image to images tree & configure
+        objectId = getObjectId(dataset)
+        self.imagesTree.insert('',tk.END, objectId, text=dataset.name)
+        self.imagesTree.set(objectId, 'size',getImageSizeStr(self.imagesList[-1]))
+
+        # Set focus
+        self.setFocus(self.imagesList[-1])
+
+        # Draw what's to be drawn
+        self.app.cinema.imagePanel.draw()
 
     def OnClick(self, event):
         code = self.imagesTree.selection()[0]
 
         for image in self.imagesList:
             if code == image.tree_id:
-                self.setContext(image)
+                self.setFocus(image)
 
-    def close(self):
+    def closeImage(self):
         code = self.imagesTree.selection()[0]
-        self.app.positionTab.clean()
+        self.app.contextTabs.cleanContext()
+
+        for image in self.imagesList:
+            if image.tree_id == code:
+                self.imagesList.remove(image)
+                print("Image ", code, " deleted from the list")
+
         self.imagesTree.delete(code)
+        print("Image ", code, " deleted from the tree")
 
     def popup(self, event):
         try:
             self.imagesTree.popup_menu.tk_popup(event.x_root, event.y_root, 0)
         finally:
             self.imagesTree.popup_menu.grab_release()
+
+    def setFocus(self, image):
+
+        objectId = getObjectId(image)
+
+        self.imagesTree.focus(objectId)
+        self.app.contextTabs.cleanContext()
+        self.app.contextTabs.setContext(image)
