@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
+
 import time
 
 class PositionTab(tk.Frame):
@@ -16,14 +17,14 @@ class PositionTab(tk.Frame):
 
     def setPosSliders(self, image):
         for i in range(0, image.ndim):
-          self.sliders.append(Slider(self, image=image, dim_order = i))
+          self.sliders.append(PositionSlider(self, image=image, dim_order = i))
 
     def cleanPosSliders(self):
         for slider in self.sliders:
             slider.destroy_()
         self.sliders = []
 
-class Slider(tk.Scale):
+class PositionSlider(tk.Scale):
 
     def_length = 250
 
@@ -35,9 +36,11 @@ class Slider(tk.Scale):
         self.image = kwargs['image']
         self.dim_order = kwargs['dim_order']  # a position of dimension in dim lists
 
+        self.value = tk.IntVar()
+
         self.layout = tk.LabelFrame(self.tab, text=self.image.dim_label[self.dim_order])
         # super(Slider,self).__init__(self.layout, orient=tk.HORIZONTAL, length = 284, from_=0, to=250)
-        super().__init__(self.layout, orient=tk.HORIZONTAL, length = self.def_length, from_= self.image.dim_from[self.dim_order], to=self.image.dim_to[self.dim_order])
+        super().__init__(self.layout, variable=self.value ,orient=tk.HORIZONTAL, length = 250, from_= self.image.dim_from[self.dim_order], to=self.image.dim_to[self.dim_order])
 
         # set initial position
         self.set(self.image.dim_pos[self.dim_order])
@@ -91,7 +94,7 @@ class Slider(tk.Scale):
 
     def callback(self,event):
         # TODO
-        self.app.contentTabs.imagesTab.imagesList[0].dim_pos[2] = self.get()
+        self.image.dim_pos[self.dim_order] = self.value.get()
         self.app.cinema.imagePanel.draw()
 
     def leftClick(self, event):
@@ -115,6 +118,7 @@ class Slider(tk.Scale):
         self.app.cinema.imagePanel.draw()
 
     def playClick(self,event):
+        # TODO
         for i in range(int(self.get()), int(self.cget('to'))):
             self.set(self.get()+1)
             time.sleep(0.5)

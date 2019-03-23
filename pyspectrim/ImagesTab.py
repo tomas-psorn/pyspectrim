@@ -28,13 +28,16 @@ class ImagesTab(tk.Frame):
         self.contentTabs.add(self, text="Images")
 
         self.imagesTree = ttk.Treeview(self)
-        self.imagesTree.config(columns=('size'))
+        self.imagesTree.config(columns=('size','dtype'))
 
         self.imagesTree.column('#0', width=150)
         self.imagesTree.column('size', width=150)
+        self.imagesTree.column('dtype', width=150)
+
 
         self.imagesTree.heading('#0', text='Name')
         self.imagesTree.heading('size', text='Size')
+        self.imagesTree.heading('dtype', text='Data type')
 
         self.imagesTree.bind("<Button-1>", self.OnClick)
 
@@ -47,6 +50,8 @@ class ImagesTab(tk.Frame):
 
     def insertImage(self, dataset):
 
+        self.dataset = dataset
+
         # Insert new image to images list
         self.imagesList.append(Image(dataset))
 
@@ -54,6 +59,8 @@ class ImagesTab(tk.Frame):
         objectId = getObjectId(dataset)
         self.imagesTree.insert('',tk.END, objectId, text=dataset.name)
         self.imagesTree.set(objectId, 'size',getImageSizeStr(self.imagesList[-1]))
+        self.imagesTree.set(objectId, 'dtype',self.dataset.dtype)
+        self.imagesTree.selection_set(objectId)
 
         # Set focus
         self.setFocus(self.imagesList[-1])
