@@ -29,13 +29,19 @@ class Image():
 
         self.visibility = 1.0
 
-    def getFrame(self):
+    def getFrame_ax(self):
 
         frame = self.data[:,:,self.dim_pos[2]]
         frame = 255*(frame - np.amin(frame))/np.amax(frame)
         frame = frame.astype(int)
 
         return frame
+
+    def getFrame_cor(self):
+        return -1
+
+    def getFrame_trans(self):
+        return -1
 
     def incrementPosition(self, dim_order):
         if self.dim_pos[dim_order] < self.dim_to[dim_order] - 1:
