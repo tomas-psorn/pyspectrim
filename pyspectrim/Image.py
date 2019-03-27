@@ -43,6 +43,8 @@ class Image():
     def getFrame_trans(self):
         return -1
 
+    # Handling position
+
     def incrementPosition(self, dim_order):
         if self.dim_pos[dim_order] < self.dim_to[dim_order] - 1:
             self.dim_pos[dim_order] += 1
@@ -57,8 +59,17 @@ class Image():
     def posToMin(self, dim_order):
         self.dim_pos[dim_order] = self.dim_from[dim_order]
 
+    # Visibility
 
+    def isVisible(self):
+        if self.visibility > 0.0:
+            return "True"
+        else:
+            return "False"
 
+    def setVisible(self):
+        self.visibility = 1.0
 
-
+    def setInvisible(self):
+        self.visibility = 0.0
 

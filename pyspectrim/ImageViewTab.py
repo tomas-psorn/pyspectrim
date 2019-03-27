@@ -12,6 +12,11 @@ class ImageViewTab(tk.Frame):
 
         self.alphaSlider = AlphaSlider(self)
 
+    def setAlpha(self, image):
+        self.alphaSlider.set(image.visibility)
+
+    def clean(self):
+        self.alphaSlider.layout.destroy()
 
 class AlphaSlider(tk.Scale):
     def __init__(self, tab):

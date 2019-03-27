@@ -36,6 +36,7 @@ class FilesTab(tk.Frame):
         super().__init__(self.contentTabs)
         self.contentTabs.add(self, text="Files")
 
+        # init tree
         self.filesTree = ttk.Treeview(self)
         self.filesTree.config(columns=('size'))
 
@@ -45,13 +46,24 @@ class FilesTab(tk.Frame):
 
         self.filesTree.bind("<Double-1>", self.OnDoubleClick)
 
+        # init context menu
+        self.filesTree.popup_menu = tk.Menu(self.filesTree, tearoff=0)
+
+        self.filesTree.popup_menu.add_command(label="Mount H5 file", command= lambda: self.mounth5dir(self.app))
+        self.filesTree.popup_menu.add_command(label="Close", command=self.closeFile)
+        self.filesTree.bind("<Button-3>", self.popupContextMenu)
+
+
         self.filesTree.pack()
 
+
+    # event handlers
 
     def mounth5dir(self,app):
         path = filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("h5 files","*.h5"),))
         self.filesList.append(File(app, path))
         self.addEntry(self.filesList[-1],"")
+        self.app.contentTabs.select(self.contentTabs.filesTab)
 
     def OnDoubleClick(self,event):
         code = self.filesTree.selection()[0]
@@ -62,9 +74,15 @@ class FilesTab(tk.Frame):
         # Switch tab to images in content section
         self.app.contentTabs.select(self.contentTabs.imagesTab)
 
+    def popupContextMenu(self, event):
 
+        try:
+            self.filesTree.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.filesTree.popup_menu.grab_release()
 
-
+    def closeFile(self):
+        pass
 
     def GetDataset(self, code):
         for _file in self.filesList:

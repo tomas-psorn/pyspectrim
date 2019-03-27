@@ -21,5 +21,5 @@ class ImagePanel():
 
     def draw(self):
         image = self.app.contentTabs.imagesTab.imagesList[0]
-        self.a.imshow(image.getFrame())
+        self.a.imshow(image.getFrame_ax())
         self.canvas.draw()
