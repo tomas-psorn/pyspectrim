@@ -1,4 +1,4 @@
-from pyspectrim.FilesTab import getObjectId
+from pyspectrim.File import getH5Id
 
 import tkinter as tk
 from tkinter import ttk
@@ -9,7 +9,7 @@ import h5py
 class Image():
     def __init__(self, dataset):
 
-        self.tree_id = getObjectId(dataset)
+        self.tree_id = getH5Id(dataset)
         self.data = np.array(dataset)
         self.data = np.squeeze(self.data)
 

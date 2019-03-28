@@ -1,4 +1,4 @@
-from pyspectrim.FilesTab import getObjectId
+from pyspectrim.File import getH5Id
 from pyspectrim.Image import Image
 import tkinter as tk
 from tkinter import ttk
@@ -18,6 +18,7 @@ class ImagesTab(tk.Frame):
 
     imagesList = []
     imagesOnFocus = []
+    imagesVisibleList = []
 
     def __init__(self, contentTabs):
 
@@ -58,9 +59,11 @@ class ImagesTab(tk.Frame):
 
         # Insert new image to images list
         self.imagesList.append(Image(dataset))
+        self.imagesVisibleList.append(self.imagesList[-1])
+        self.setIndexPhysSwitch()
 
         # Insert new image to images tree & configure
-        objectId = getObjectId(dataset)
+        objectId = getH5Id(dataset)
         self.imagesTree.insert('',tk.END, objectId, text=dataset.name)
         self.imagesTree.set(objectId, 'size',getImageSizeStr(self.imagesList[-1]))
         self.imagesTree.set(objectId, 'dtype',self.dataset.dtype)
@@ -111,7 +114,7 @@ class ImagesTab(tk.Frame):
 
     def setFocus(self, image):
 
-        objectId = getObjectId(image)
+        objectId = getH5Id(image)
 
         self.imagesTree.focus(objectId)
         self.app.contextTabs.cleanContext()
@@ -138,3 +141,23 @@ class ImagesTab(tk.Frame):
 
         self.app.contextTabs.setContext(image)
         self.imagesTree.set(code, 'visibility','False')
+
+    def setIndexPhysSwitch(self):
+        if self.dimConsistCheck():
+            self.app.contextTabs.imageViewTab.setIndPhys('ind')
+        else:
+            self.app.contextTabs.imageViewTab.lockIndPhysSwitch(True)
+            self.app.contextTabs.imageViewTab.setIndPhys('phys')
+
+
+    def dimConsistCheck(self):
+        """
+        :return: boolean value indicating whether the images in imagesVisibleList
+        are geometrically consistent
+        """
+        for image1 in self.imagesVisibleList:
+            for image2 in self.imagesVisibleList:
+                if image1.dim_size != image2.dim_size:
+                    return False
+        return True
+

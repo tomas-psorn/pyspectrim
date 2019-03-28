@@ -18,6 +18,7 @@ class ContextTabs(ttk.Notebook):
         self.cleanContext()
         self.positionTab.setPosSliders(image)
         self.imageViewTab.setAlpha(image)
+        self.app.contentTabs.imagesTab.setIndexPhysSwitch()
 
     def cleanContext(self):
         self.positionTab.cleanPosSliders()
