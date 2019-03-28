@@ -13,7 +13,7 @@ class ImageViewTab(tk.Frame):
         self.alphaSlider = AlphaSlider(self)
 
     def setAlpha(self, image):
-        self.alphaSlider.set(image.visibility)
+        self.alphaSlider.value = image.getVisibility()
 
     def clean(self):
         self.alphaSlider.layout.destroy()

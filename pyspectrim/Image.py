@@ -43,6 +43,9 @@ class Image():
     def getFrame_trans(self):
         return -1
 
+    def getVisibility(self):
+        return self.visibility
+
     # Handling position
 
     def incrementPosition(self, dim_order):
