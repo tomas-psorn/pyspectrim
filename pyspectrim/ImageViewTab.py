@@ -21,7 +21,6 @@ class ImageViewTab(tk.Frame):
         self.indPhysSwitch.set(value)
 
     def lockIndPhysSwitch(self,value):
-        print(value)
         self.indPhysSwitch.lock(value)
 
     # maintenance

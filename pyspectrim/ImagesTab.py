@@ -45,8 +45,8 @@ class ImagesTab(tk.Frame):
 
 
         self.imagesTree.popup_menu = tk.Menu(self.imagesTree, tearoff=0)
-        self.imagesTree.popup_menu.add_command(label="Set visible", command=self.setImageVisible)
-        self.imagesTree.popup_menu.add_command(label="Set invisible", command=self.setImageInvisible)
+        self.imagesTree.popup_menu.add_command(label="Set visible", command= lambda: self.setImageVisibility(1.0))
+        self.imagesTree.popup_menu.add_command(label="Set invisible", command= lambda: self.setImageVisibility(0.0))
         self.imagesTree.popup_menu.add_separator()
         self.imagesTree.popup_menu.add_command(label="Close", command=self.closeImage)
         self.imagesTree.bind("<Button-3>", self.popupContextMenu)
@@ -98,8 +98,6 @@ class ImagesTab(tk.Frame):
 
     def popupContextMenu(self, event):
 
-        print(dir(self.imagesTree.selection()[0]))
-
         try:
             code = self.imagesTree.selection()[0]
 
@@ -122,25 +120,24 @@ class ImagesTab(tk.Frame):
 
     # Context menu handle functions
 
-    def setImageVisible(self):
+    def setImageVisibility(self, value):
         code = self.imagesTree.selection()[0]
-
         for image in self.imagesList:
             if image.tree_id == code:
-                image.setVisible()
+                if image.getVisibility() == 0.0 and value > 0.0:
+                    image.setVisibility(value)
+                    self.imagesVisibleList.append(image)
+
+                elif image.getVisibility() > 0.0 and value == 0.0:
+                    image.setVisibility(value)
+                    self.imagesVisibleList.remove(image)
 
         self.app.contextTabs.setContext(image)
-        self.imagesTree.set(code, 'visibility','True')
 
-    def setImageInvisible(self):
-        code = self.imagesTree.selection()[0]
-
-        for image in self.imagesList:
-            if image.tree_id == code:
-                image.setInvisible()
-
-        self.app.contextTabs.setContext(image)
-        self.imagesTree.set(code, 'visibility','False')
+        if value == 0.0:
+            self.imagesTree.set(code, 'visibility','False')
+        else:
+            self.imagesTree.set(code, 'visibility', 'True')
 
     def setIndexPhysSwitch(self):
         if self.dimConsistCheck():

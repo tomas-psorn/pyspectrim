@@ -128,10 +128,9 @@ class PositionSlider(tk.Scale):
         self.from_ = self.image.dim_from_phys[self.dim_order]
         self.to = self.image.dim_to_phys[self.dim_order]
         self.resolution = self.image.dim_spacing[self.dim_order]
-        print("Phys")
 
     def setIndexed(self):
-        print("Ind")
+        pass
 
     def destroy_(self):
         self.layout.destroy()

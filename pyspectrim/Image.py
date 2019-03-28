@@ -70,9 +70,8 @@ class Image():
         else:
             return "False"
 
-    def setVisible(self):
-        self.visibility = 1.0
+    def setVisibility(self, value):
+            self.visibility = value
 
-    def setInvisible(self):
-        self.visibility = 0.0
+
 
