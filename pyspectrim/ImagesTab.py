@@ -42,7 +42,7 @@ class ImagesTab(tk.Frame):
         self.imagesTree.heading('visibility', text='Visible')
 
         self.imagesTree.bind("<Button-1>", self.OnClick)
-
+        self.imagesTree.bind("<Key>", self.on_key_enter)
 
         self.imagesTree.popup_menu = tk.Menu(self.imagesTree, tearoff=0)
         self.imagesTree.popup_menu.add_command(label="Set visible", command= lambda: self.setImageVisibility(1.0))
@@ -55,8 +55,7 @@ class ImagesTab(tk.Frame):
 
     # getters
     def getVisible(self):
-        # todo implement
-        pass
+        return self.imagesVisibleList
 
     def getOnFocus(self):
         # todo implement
@@ -85,6 +84,11 @@ class ImagesTab(tk.Frame):
         # Draw what's to be drawn
         self.app.cinema.imagePanel.draw()
 
+    # Handlers
+    def on_key_enter(self,event):
+        if event.keysym == 'Delete':
+            self.closeImage()
+
     def OnClick(self, event):
         code = self.imagesTree.selection()[0]
 
@@ -101,7 +105,9 @@ class ImagesTab(tk.Frame):
                 self.imagesList.remove(image)
                 print("Image ", code, " deleted from the list")
 
+
         self.imagesTree.delete(code)
+        self.app.cinema.imagePanel.draw()
         self.app.contextTabs.cleanContext()
         print("Image ", code, " deleted from the tree")
 

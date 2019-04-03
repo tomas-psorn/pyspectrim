@@ -195,4 +195,5 @@ class ColorMapOption(tk.OptionMenu):
         self.layout.pack(fill=tk.X)
 
     def set(self, value):
+        
         self.app.cinema.imagePanel.draw()

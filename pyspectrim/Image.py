@@ -7,6 +7,8 @@ import cv2
 import numpy as np
 import h5py
 
+import matplotlib.pyplot as plt
+
 class Image():
     def __init__(self, dataset):
 
@@ -31,22 +33,28 @@ class Image():
         self.visibility = 1.0
         self.colormap = cv2.COLORMAP_BONE
 
+        self.min = np.amin(self.data)
+        self.max = np.amax(self.data)
+
     # getters
-    def getFrame_ax(self):
+    def getFrame(self, **kwargs):
 
-        frame = self.data[:,:,self.dim_pos[2]]
-        # frame = self.applyColormap(frame)
+        if kwargs['orient'] == 0:
+            frame = self.data[:, :, self.dim_pos[2]]
+        elif kwargs['orient'] == 1:
+            frame = self.data[:, self.dim_pos[1], :]
+        elif kwargs['orient'] == 2:
+            frame = self.data[self.dim_pos[0], :, :]
+        else:
+            print("Unknown orientation")
+            return None
+
+        frame = self.frameToUint8(frame)
+
+        frame = self.applyColormap(frame)
+
         return frame
 
-    def getFrame_cor(self):
-        frame = self.data[:,self.dim_pos[1] , :]
-        # frame = self.applyColormap(frame)
-        return frame
-
-    def getFrame_sag(self):
-        frame = self.data[self.dim_pos[2], :, :]
-        # frame = self.applyColormap(frame)
-        return frame
 
     def getVisibility(self):
         return self.visibility
@@ -79,6 +87,10 @@ class Image():
             self.visibility = value
 
     # Image manipulation
+    def frameToUint8(self, frame):
+        frame = 255.0 * frame / self.max
+        return frame.astype(np.uint8)
+
     def applyColormap(self,frame):
         return cv2.applyColorMap(frame, self.colormap)
 
