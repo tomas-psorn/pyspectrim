@@ -57,9 +57,13 @@ class ImagesTab(tk.Frame):
     def getVisible(self):
         return self.imagesVisibleList
 
-    def getOnFocus(self):
-        # todo implement
-        pass
+    def get_image_on_focus(self):
+        for image in self.imagesList:
+            print("focused: ", self.imagesTree.focus)
+            if image.tree_id == self.imagesTree.focus:
+                return image
+
+        # return (image for image in self.imagesList if image.tree_id == self.imagesTree.focus)
 
     def insertImage(self, dataset):
 

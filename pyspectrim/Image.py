@@ -1,5 +1,7 @@
 from pyspectrim.File import getH5Id
 
+import logging
+
 import tkinter as tk
 from tkinter import ttk
 
@@ -35,6 +37,24 @@ class Image():
 
         self.min = np.amin(self.data)
         self.max = np.amax(self.data)
+
+    # properties
+    @property
+    def colormap(self):
+        return self.__colormap
+
+    @colormap.setter
+    def colormap(self,var):
+        if var == 'gray':
+            self.__colormap = cv2.COLORMAP_BONE
+        elif var == 'cold':
+            self.__colormap = cv2.COLORMAP_COOL
+        elif var == 'winter':
+            self.__colormap = cv2.COLORMAP_WINTER
+        else:
+            self.__colormap = cv2.COLORMAP_BONE
+            logging.debug("Colormap: {} unknown".format(var))
+
 
     # getters
     def getFrame(self, **kwargs):

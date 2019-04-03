@@ -195,5 +195,6 @@ class ColorMapOption(tk.OptionMenu):
         self.layout.pack(fill=tk.X)
 
     def set(self, value):
-        
+        image = self.app.contentTabs.imagesTab.get_image_on_focus()
+        image.colormap(value)
         self.app.cinema.imagePanel.draw()
