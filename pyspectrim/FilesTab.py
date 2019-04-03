@@ -8,12 +8,14 @@ import logging
 
 class FilesTab(tk.Frame):
 
-    filesList = []
+
 
     def __init__(self, contentTabs):
 
+        self.filesList = []
+
         self.contentTabs = contentTabs
-        self.app = self.contentTabs.app
+        self.app = contentTabs.app
 
         super().__init__(self.contentTabs)
         self.contentTabs.add(self, text="Files")
@@ -26,25 +28,40 @@ class FilesTab(tk.Frame):
 
         self.filesTree.heading('#0', text='Name')
 
-        self.filesTree.bind("<Double-1>", self.OnDoubleClick)
+        self.filesTree.bind("<Double-1>", self.on_double_click)
+        self.filesTree.bind("<Button-1>", self.on_left_click)
+        self.filesTree.bind("<Button-3>", self.on_right_click)
 
         # init context menu
-        self.filesTree.popup_menu = tk.Menu(self.filesTree, tearoff=0)
+        self.filesTree.popup_on_file = tk.Menu(self.filesTree, tearoff=0)
+        self.filesTree.popup_on_file.add_command(label="Mount H5 file", command=self.mount_h5_dir)
+        self.filesTree.popup_on_file.add_command(label="Close", command=self.close_file)
 
-        self.filesTree.popup_menu.add_command(label="Mount H5 file", command= lambda: self.mounth5dir(self.app))
-        self.filesTree.popup_menu.add_command(label="Close", command=self.closeFile)
-        self.filesTree.bind("<Button-3>", self.popupContextMenu)
-
+        self.filesTree.popup_on_blank = tk.Menu(self.filesTree, tearoff=0)
+        self.filesTree.popup_on_blank.add_command(label="Mount H5 file", command=self.mount_h5_dir)
 
         self.filesTree.pack()
 
 
     # event handlers
-    def OnDoubleClick(self,event):
+    def on_right_click(self, event):
+        item = self.filesTree.identify_row(event.y)
+        if item != '':
+            self.filesTree.selection_set(item)
+            self.filesTree.focus(item)
+            self.popup_on_file(event)
+        else:
+            self.poup_on_blank(event)
+
+    def on_left_click(self,event):
+        if self.filesTree.identify_row(event.y) == '':
+            self.filesTree.selection_remove(self.filesTree.selection())
+
+    def on_double_click(self,event):
         code = self.filesTree.selection()[0]
 
         # insert image
-        dataset = self.GetDataset(code)
+        dataset = self.GetDataset(code.replace(".h5",""))
 
         if dataset:
             self.app.contentTabs.imagesTab.insertImage(dataset)
@@ -54,14 +71,40 @@ class FilesTab(tk.Frame):
         # Switch tab to images in content section
         self.app.contentTabs.select(self.contentTabs.imagesTab)
 
-    def popupContextMenu(self, event):
+    # poups
+    def popup_on_file(self, event):
         try:
-            self.filesTree.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+            self.filesTree.popup_on_file.tk_popup(event.x_root, event.y_root, 0)
         finally:
-            self.filesTree.popup_menu.grab_release()
+            self.filesTree.popup_on_file.grab_release()
 
-    def closeFile(self):
-        pass
+    def poup_on_blank(self,event):
+        try:
+            self.filesTree.popup_on_blank.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.filesTree.popup_on_blank.grab_release()
+
+    #
+    def close_file(self):
+        file_code = self.filesTree.focus()
+
+        for file in self.filesList:
+            if file_code == file.filename:
+                try:
+                    self.filesList.remove(file)
+                    logging.debug("Removed file from files list {}".format(file_code))
+                except:
+                    logging.warning("Failed to remove file from files list {}".format(file_code))
+                    return
+
+                try:
+                    self.filesTree.delete(file_code)
+                    logging.debug("Removed file from files tree {}".format(file_code))
+                except:
+                    logging.warning("Failed to remove file from files tree {}".format(file_code))
+                    return
+
+
 
     # uncategorized functionality
     def GetDataset(self, code):
@@ -87,13 +130,14 @@ class FilesTab(tk.Frame):
             for key in object.keys():
                 self.addEntry(object[key], getH5Id(object))
 
-    def mounth5dir(self,app):
+    def mount_h5_dir(self):
         path = filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("h5 files","*.h5"),))
+
 
         logging.info("Mounting: {}".format(path))
 
         try:
-            self.filesList.append(File(app, path))
+            self.filesList.append(File(self.app, path))
         except:
             logging.info("File not mounted: {}".format(path))
             return
