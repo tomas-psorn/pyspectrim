@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import Menu
 
+import logging
 
 
 
@@ -58,4 +59,9 @@ class PySpectrim():
 
 if __name__ == "__main__":
     app = PySpectrim()
+
+    logging.warning("Deep shit")
+    logging.warning("Deep shit")
+    logging.warning("Deep shit")
+
     app.root.mainloop()

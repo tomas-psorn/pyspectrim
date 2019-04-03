@@ -1,5 +1,6 @@
 from pyspectrim.PositionTab import PositionTab
 from pyspectrim.ImageViewTab import ImageViewTab
+from pyspectrim.LoggerTab import LoggerTab
 
 import tkinter as tk
 from tkinter import ttk
@@ -13,6 +14,7 @@ class ContextTabs(ttk.Notebook):
 
         self.positionTab = PositionTab(self)
         self.imageViewTab = ImageViewTab(self)
+        self.loggerTab = LoggerTab(self)
 
     def setContext(self, image):
         self.cleanContext()
