@@ -53,6 +53,15 @@ class ImagesTab(tk.Frame):
 
         self.imagesTree.pack()
 
+    # getters
+    def getVisible(self):
+        # todo implement
+        pass
+
+    def getOnFocus(self):
+        # todo implement
+        pass
+
     def insertImage(self, dataset):
 
         self.dataset = dataset

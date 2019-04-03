@@ -3,6 +3,7 @@ from pyspectrim.File import getH5Id
 import tkinter as tk
 from tkinter import ttk
 
+import cv2
 import numpy as np
 import h5py
 
@@ -28,20 +29,24 @@ class Image():
         self.dim_pos = [ int(self.dim_size[0]/2), int(self.dim_size[1]/2), int(self.dim_size[2]/2) ]
 
         self.visibility = 1.0
+        self.colormap = cv2.COLORMAP_BONE
 
+    # getters
     def getFrame_ax(self):
 
         frame = self.data[:,:,self.dim_pos[2]]
-        frame = 255*(frame - np.amin(frame))/np.amax(frame)
-        frame = frame.astype(int)
-
+        # frame = self.applyColormap(frame)
         return frame
 
     def getFrame_cor(self):
-        return -1
+        frame = self.data[:,self.dim_pos[1] , :]
+        # frame = self.applyColormap(frame)
+        return frame
 
-    def getFrame_trans(self):
-        return -1
+    def getFrame_sag(self):
+        frame = self.data[self.dim_pos[2], :, :]
+        # frame = self.applyColormap(frame)
+        return frame
 
     def getVisibility(self):
         return self.visibility
@@ -73,5 +78,8 @@ class Image():
     def setVisibility(self, value):
             self.visibility = value
 
+    # Image manipulation
+    def applyColormap(self,frame):
+        return cv2.applyColorMap(frame, self.colormap)
 
 

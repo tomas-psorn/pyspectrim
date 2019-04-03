@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 
-
+import numpy as np
 import matplotlib
 matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -15,12 +15,29 @@ class ImagePanel():
         self.app = self.cinema.app
         self.f = Figure(figsize=(5, 5), dpi=100)
         self.a = self.f.add_subplot(111)
-        self.a.plot([1, 2, 3, 4, 5, 6, 7, 8], [5, 6, 1, 3, 8, 9, 3, 5])
         self.canvas = FigureCanvasTkAgg(self.f, self.cinema)
         self.canvas.get_tk_widget().grid(column=0, row=0)
         self.canvas._tkcanvas.grid(column=0, row=0)
 
     def draw(self):
+        orient = self.app.contextTabs.imageViewTab.getImageOrent()
+        cmap = self.app.contextTabs.imageViewTab.getColorMap()
         image = self.app.contentTabs.imagesTab.imagesList[0]
-        self.a.imshow(image.getFrame_ax())
+
+
+        frame = None
+
+        if orient == 0:
+            frame = image.getFrame_ax()
+
+        elif orient == 1:
+            frame = image.getFrame_cor()
+        elif orient == 2:
+            frame = image.getFrame_sag()
+
+        frame = 255 * (frame - np.amin(frame)) / np.amax(frame)
+        frame = frame.astype(int)
+
+        self.a.imshow(frame, cmap=cmap)
+
         self.canvas.draw()
