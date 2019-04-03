@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 
+import logging
 
 class FilesTab(tk.Frame):
 
@@ -88,9 +89,27 @@ class FilesTab(tk.Frame):
 
     def mounth5dir(self,app):
         path = filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("h5 files","*.h5"),))
-        self.filesList.append(File(app, path))
-        self.addEntry(self.filesList[-1],"")
+
+        logging.info("Mounting: {}".format(path))
+
+        try:
+            self.filesList.append(File(app, path))
+        except:
+            logging.info("File not mounted: {}".format(path))
+            return
+
+        try:
+            self.addEntry(self.filesList[-1],"")
+        except:
+            logging.debug("File cannot be added into files list: {}".format(path))
+            self.filesList = self.filesList[0:-1]
+            return
+
+        logging.info("Mounted: {}".format(path))
+
         self.app.contentTabs.select(self.contentTabs.filesTab)
+
+
 
 
 

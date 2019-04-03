@@ -121,6 +121,8 @@ class PositionSlider(tk.Scale):
         # TODO
         for i in range(int(self.get()), int(self.cget('to'))):
             self.set(self.get()+1)
+            self.image.incrementPosition(self.dim_order)
+            self.app.cinema.imagePanel.draw()
             time.sleep(0.5)
 
     def setPhysical(self):

@@ -59,9 +59,4 @@ class PySpectrim():
 
 if __name__ == "__main__":
     app = PySpectrim()
-
-    logging.warning("Deep shit")
-    logging.warning("Deep shit")
-    logging.warning("Deep shit")
-
     app.root.mainloop()

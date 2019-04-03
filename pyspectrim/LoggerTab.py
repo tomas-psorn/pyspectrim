@@ -5,6 +5,8 @@ import logging
 import tkinter as tk  # Python 3.x
 import tkinter.scrolledtext as ScrolledText
 
+# taken from https://gist.github.com/bitsgalore/901d0abe4b874b483df3ddc4168754aa
+
 class TextHandler(logging.Handler):
     # This class allows you to log to a Tkinter Text or ScrolledText widget
     # Adapted from Moshe Kaplan: https://gist.github.com/moshekaplan/c425f861de7bbf28ef06
@@ -13,6 +15,7 @@ class TextHandler(logging.Handler):
         # run the regular Handler __init__
         logging.Handler.__init__(self)
         # Store a reference to the Text it will log to
+
         self.text = text
 
     def emit(self, record):
