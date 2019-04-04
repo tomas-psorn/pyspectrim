@@ -7,6 +7,8 @@ class ImageViewTab(tk.Frame):
         self.app = contextTabs.app
         self.contextTabs = contextTabs
 
+        self.image = None
+
         super().__init__(self.contextTabs)
         self.contextTabs.add(self, text="Image view")
 
@@ -22,29 +24,12 @@ class ImageViewTab(tk.Frame):
         self.update()
 
     def update(self):
-        try:
-            image_code = self.app.contentTabs.imagesTab.imagesTree.selection()[0]
-
-            try:
-                for image in self.app.contentTabs.imagesTab.imagesList:
-                    if image_code == image.tree_id:
-                        # set alpha switch
-                        self.setAlpha(image.getVisibility())
-            except:
-                print("Problem setting alpha")
-        except:
-            print("No image selected")
-
-
-
-                #set ind phys switch
+        self.image = self.app.contentTabs.imagesTab.get_image_on_focus()
+        self.alphaSlider.set(self.image.visibility)
 
 
 
     # setters, getters
-    def setAlpha(self, image):
-        self.alphaSlider.set(image.getVisibility())
-
     def setIndPhys(self,value):
         self.indPhysSwitch.set(value)
 
@@ -77,14 +62,32 @@ class AlphaSlider(tk.Scale):
         self.value = tk.DoubleVar()
         self.layout = tk.LabelFrame(self.tab, text='Visibility')
 
-        super().__init__(self.layout, variable=self.value ,orient=tk.HORIZONTAL, length = 250, from_= 0.0, to=1.0)
+        super().__init__(self.layout,
+                         variable=self.value,
+                         orient=tk.HORIZONTAL,
+                         length = 250,from_= 0.0,
+                         to=1.0,
+                         resolution=0.01)
+
+        # bind
+        self.bind("<B1-Motion>", self.drag)
+
         self.set(1.0)
 
         self.pack(anchor=tk.W)
         self.layout.pack(fill=tk.X)
 
+    # event handlers
+    def drag(self, event):
+        self.tab.image.visibility = self.get()
+        self.app.cinema.imagePanel.draw()
+
+
     def set(self,value):
         self.value.set(value)
+        image = self.app.contentTabs.imagesTab.get_image_on_focus()
+        if image:
+            image.visibility = value
 
 
 class IndPhysSwitch():
@@ -196,5 +199,5 @@ class ColorMapOption(tk.OptionMenu):
 
     def set(self, value):
         image = self.app.contentTabs.imagesTab.get_image_on_focus()
-        image.colormap(value)
+        image.colormap = value
         self.app.cinema.imagePanel.draw()

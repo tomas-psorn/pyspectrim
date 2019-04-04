@@ -59,20 +59,24 @@ class ImagesTab(tk.Frame):
 
     def get_image_on_focus(self):
         for image in self.imagesList:
-            print("focused: ", self.imagesTree.focus)
-            if image.tree_id == self.imagesTree.focus:
+            if image.tree_id == self.imagesTree.focus():
                 return image
 
         # return (image for image in self.imagesList if image.tree_id == self.imagesTree.focus)
 
-    def insertImage(self, dataset):
+    def insertImage(self, image_code, dataset):
 
-        self.dataset = dataset
+        if dataset.__class__.__name__ == 'Dataset':
+            self.dataset = dataset
+        else:
+            return
 
         # Insert new image to images list
         self.imagesList.append(Image(dataset))
         self.imagesVisibleList.append(self.imagesList[-1])
         self.setIndexPhysSwitch()
+
+        self.app.contentTabs.select(self)
 
         # Insert new image to images tree & configure
         objectId = getH5Id(dataset)
@@ -81,8 +85,9 @@ class ImagesTab(tk.Frame):
         self.imagesTree.set(objectId, 'dtype',self.dataset.dtype)
         self.imagesTree.set(objectId, 'visibility',self.imagesList[-1].isVisible())
         self.imagesTree.selection_set(objectId)
+        self.imagesTree.focus_set()
+        self.imagesTree.focus(objectId)
 
-        # Set focus
         self.setFocus(self.imagesList[-1])
 
         # Draw what's to be drawn
@@ -95,7 +100,6 @@ class ImagesTab(tk.Frame):
 
     def OnClick(self, event):
         code = self.imagesTree.selection()[0]
-
         for image in self.imagesList:
             if code == image.tree_id:
                 self.setFocus(image)
@@ -130,10 +134,6 @@ class ImagesTab(tk.Frame):
             self.imagesTree.popup_menu.grab_release()
 
     def setFocus(self, image):
-
-        objectId = getH5Id(image)
-
-        self.imagesTree.focus(objectId)
         self.app.contextTabs.cleanContext()
         self.app.contextTabs.setContext(image)
 
@@ -143,12 +143,12 @@ class ImagesTab(tk.Frame):
         code = self.imagesTree.selection()[0]
         for image in self.imagesList:
             if image.tree_id == code:
-                if image.getVisibility() == 0.0 and value > 0.0:
-                    image.setVisibility(value)
+                if image.visibility == 0.0 and value > 0.0:
+                    image.visibility = value
                     self.imagesVisibleList.append(image)
 
-                elif image.getVisibility() > 0.0 and value == 0.0:
-                    image.setVisibility(value)
+                elif image.visibility > 0.0 and value == 0.0:
+                    image.visibility = value
                     self.imagesVisibleList.remove(image)
 
         self.app.contextTabs.setContext(image)
@@ -176,4 +176,6 @@ class ImagesTab(tk.Frame):
                 if image1.dim_size != image2.dim_size:
                     return False
         return True
+
+
 

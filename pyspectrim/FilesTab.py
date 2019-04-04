@@ -58,18 +58,9 @@ class FilesTab(tk.Frame):
             self.filesTree.selection_remove(self.filesTree.selection())
 
     def on_double_click(self,event):
-        code = self.filesTree.selection()[0]
-
-        # insert image
-        dataset = self.GetDataset(code.replace(".h5",""))
-
-        if dataset:
-            self.app.contentTabs.imagesTab.insertImage(dataset)
-        else:
-            return
-
-        # Switch tab to images in content section
-        self.app.contentTabs.select(self.contentTabs.imagesTab)
+        dataset_code = self.filesTree.selection()[0]
+        dataset = self.GetDataset(dataset_code.replace(".h5", ""))
+        self.app.contentTabs.imagesTab.insertImage(dataset_code, dataset)
 
     # poups
     def popup_on_file(self, event):
@@ -105,7 +96,6 @@ class FilesTab(tk.Frame):
                     return
 
 
-
     # uncategorized functionality
     def GetDataset(self, code):
         for _file in self.filesList:
@@ -132,7 +122,6 @@ class FilesTab(tk.Frame):
 
     def mount_h5_dir(self):
         path = filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("h5 files","*.h5"),))
-
 
         logging.info("Mounting: {}".format(path))
 

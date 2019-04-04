@@ -32,8 +32,8 @@ class Image():
 
         self.dim_pos = [ int(self.dim_size[0]/2), int(self.dim_size[1]/2), int(self.dim_size[2]/2) ]
 
-        self.visibility = 1.0
-        self.colormap = cv2.COLORMAP_BONE
+        self._visibility = 1.0
+        self._colormap = cv2.COLORMAP_BONE
 
         self.min = np.amin(self.data)
         self.max = np.amax(self.data)
@@ -41,20 +41,32 @@ class Image():
     # properties
     @property
     def colormap(self):
-        return self.__colormap
+        return self._colormap
 
     @colormap.setter
-    def colormap(self,var):
-        if var == 'gray':
-            self.__colormap = cv2.COLORMAP_BONE
-        elif var == 'cold':
-            self.__colormap = cv2.COLORMAP_COOL
-        elif var == 'winter':
-            self.__colormap = cv2.COLORMAP_WINTER
+    def colormap(self,value):
+        if value == 'gray':
+            self._colormap = cv2.COLORMAP_BONE
+        elif value == 'winter':
+            self._colormap = cv2.COLORMAP_COOL
+        elif value == 'jet':
+            self._colormap = cv2.COLORMAP_JET
         else:
-            self.__colormap = cv2.COLORMAP_BONE
-            logging.debug("Colormap: {} unknown".format(var))
+            self._colormap = cv2.COLORMAP_BONE
+            logging.debug("Colormap: {} unknown".format(value))
 
+    @property
+    def visibility(self):
+        return self._visibility
+
+    @visibility.setter
+    def visibility(self,value):
+        if value > 1.0:
+            self._visibility = 1.0
+        elif value < 0.0:
+            self._visibility = 0.0
+        else:
+            self._visibility = value
 
     # getters
     def getFrame(self, **kwargs):
@@ -69,15 +81,11 @@ class Image():
             print("Unknown orientation")
             return None
 
-        frame = self.frameToUint8(frame)
-
-        frame = self.applyColormap(frame)
+        frame = self.frame_to_0_255(frame)
+        frame = frame * self.visibility
+        frame = self.applyColormap(frame.astype(np.uint8))
 
         return frame
-
-
-    def getVisibility(self):
-        return self.visibility
 
     # Handling position
 
@@ -96,20 +104,16 @@ class Image():
         self.dim_pos[dim_order] = self.dim_from[dim_order]
 
     # Visibility
-
     def isVisible(self):
         if self.visibility > 0.0:
             return "True"
         else:
             return "False"
 
-    def setVisibility(self, value):
-            self.visibility = value
-
     # Image manipulation
-    def frameToUint8(self, frame):
-        frame = 255.0 * frame / self.max
-        return frame.astype(np.uint8)
+    def frame_to_0_255(self, frame):
+        255.0 * frame / self.max
+        return 255.0 * frame / self.max
 
     def applyColormap(self,frame):
         return cv2.applyColorMap(frame, self.colormap)

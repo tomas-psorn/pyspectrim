@@ -45,7 +45,7 @@ class ImagePanel():
         alphas = []
 
         for image in imagesList:
-            alphas.append(image.getVisibility())
+            alphas.append(image.visibility)
 
             if orient == 0:
                 frames.append(image.getFrame(orient=0))
@@ -54,12 +54,13 @@ class ImagePanel():
             elif orient == 2:
                 frames.append(image.getFrame(orient=2))
 
-        alphas = np.array(alphas)
-        alphas = alphas / np.sum(alphas)
+        # alphas = np.array(alphas)
+        # alphas = alphas / np.sum(alphas)
 
         frame = np.zeros(frames[0].shape, dtype=np.float32)
 
         for frame_, alpha_ in zip(frames, alphas):
+            # frame = frame + frame_ * alpha_
             frame = frame + frame_ * alpha_
 
         frame = cv2.cvtColor(frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
