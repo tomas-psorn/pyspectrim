@@ -16,7 +16,8 @@ class ContextTabs(ttk.Notebook):
         self.imageViewTab = ImageViewTab(self)
         self.loggerTab = LoggerTab(self)
 
-    def setContext(self, image):
+    def set_context(self, image):
+        print(self.focus)
         self.cleanContext()
         self.positionTab.setPosSliders(image)
         # self.imageViewTab.setAlpha(image)

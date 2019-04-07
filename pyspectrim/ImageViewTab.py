@@ -140,19 +140,19 @@ class ImageOrientSwitch():
         self.layout = tk.LabelFrame(self.tab, text="ImageOrientation")
 
         self.axial = tk.Radiobutton(self.layout,
-                                    text='axial',
+                                    text='coronal',
                                     variable=self.value,
                                     value=0,
                                     command= lambda : self.set('axial'))
 
         self.transversal = tk.Radiobutton(self.layout,
-                                          text='transversal',
+                                          text='sagital',
                                           variable=self.value,
                                           value=1,
                                           command=lambda : self.set('transversal'))
 
         self.sagital = tk.Radiobutton(self.layout,
-                                      text='sagital',
+                                      text='axial',
                                       variable=self.value,
                                       value=2,
                                       command=lambda : self.set('sagital'))

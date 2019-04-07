@@ -22,13 +22,15 @@ class Image():
         self.ndim = len(self.dim_size)
         self.dim_label = ['x','y','z']
 
-        self.dim_from = [0,0,0]
-        self.dim_from_phys = [0.0, 0.0, 0.0]
+        self.dim_from = np.array([0,0,0])
+        self.dim_from_phys = np.array([0.0, 0.0, 0.0])
 
-        self.dim_to = [self.dim_size[0], self.dim_size[1], self.dim_size[2]]
-        self.dim_to_phys = [25.6,25.6, 20.0]
+        self.dim_to = np.array([self.dim_size[0], self.dim_size[1], self.dim_size[2]])
+        self.dim_to_phys = np.array([25.6,25.6, 20.0])
 
-        self.dim_spacing = [0.1, 0.1, 0.5]
+        self.dim_spacing = np.array([0.1, 0.1, 0.5])
+
+        self.dim_phys_extent = self.dim_size * self.dim_spacing
 
         self.dim_pos = [ int(self.dim_size[0]/2), int(self.dim_size[1]/2), int(self.dim_size[2]/2) ]
 
@@ -37,6 +39,8 @@ class Image():
 
         self.min = np.amin(self.data)
         self.max = np.amax(self.data)
+
+        self.aspect = self.dim_phys_extent / np.amax(self.dim_phys_extent)
 
     # properties
     @property
@@ -71,19 +75,26 @@ class Image():
     # getters
     def getFrame(self, **kwargs):
 
+        # coronal
         if kwargs['orient'] == 0:
             frame = self.data[:, :, self.dim_pos[2]]
+            export_size = ( int(kwargs['max_dim'] * self.aspect[0]) , int(kwargs['max_dim'] * self.aspect[1]) )
+        # sagital
         elif kwargs['orient'] == 1:
-            frame = self.data[:, self.dim_pos[1], :]
+            frame = self.data[self.dim_pos[0],:, :]
+            export_size = (int(kwargs['max_dim'] * self.aspect[1]), int(kwargs['max_dim'] * self.aspect[2]))
+        # axial
         elif kwargs['orient'] == 2:
-            frame = self.data[self.dim_pos[0], :, :]
+            frame = self.data[:,self.dim_pos[1], :]
+            export_size = (int(kwargs['max_dim'] * self.aspect[0]), int(kwargs['max_dim'] * self.aspect[2]))
         else:
             print("Unknown orientation")
             return None
 
         frame = self.frame_to_0_255(frame)
         frame = frame * self.visibility
-        frame = self.applyColormap(frame.astype(np.uint8))
+        frame = self.resize(frame.astype(np.uint8), export_size)
+        frame = self.applyColormap(frame)
 
         return frame
 
@@ -117,5 +128,8 @@ class Image():
 
     def applyColormap(self,frame):
         return cv2.applyColorMap(frame, self.colormap)
+
+    def resize(self,frame, export_size):
+        return cv2.resize(frame, export_size, interpolation=cv2.INTER_LINEAR)
 
 

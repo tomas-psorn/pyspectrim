@@ -18,21 +18,24 @@ class ImagePanel():
         self.cinema = cinema
         self.app = self.cinema.app
 
-        self.width = 400
-        self.height = 400
+        # todo relate to window size
+        self.max_dim = 400
 
-        self.center_x = int(self.width/2)
-        self.center_y = int(self.height/2)
+        self.frame_f = np.zeros((self.max_dim,self.max_dim),dtype=np.float32)
+        self.frame_i = np.zeros((self.max_dim, self.max_dim), dtype=np.uint8)
+
+        self.center_x = int(self.max_dim/2)
+        self.center_y = int(self.max_dim/2)
 
         self.canavas = tk.Canvas(self.cinema, bg='black')
-        self.canavas.config(width=400, height=400)
+        self.canavas.config(width=self.max_dim, height=self.max_dim)
         self.canavas.pack()
 
 
-
-
-
     def draw(self):
+
+        self.frame_f[:,:] = 0.0
+        self.frame_i[:,:] = 0
 
         orient = self.app.contextTabs.imageViewTab.getImageOrent()
         cmap = self.app.contextTabs.imageViewTab.getColorMap()
@@ -48,28 +51,25 @@ class ImagePanel():
             alphas.append(image.visibility)
 
             if orient == 0:
-                frames.append(image.getFrame(orient=0))
+                frames.append(image.getFrame(orient=0, max_dim = self.max_dim))
             elif orient == 1:
-                frames.append(image.getFrame(orient=1))
+                frames.append(image.getFrame(orient=1, max_dim = self.max_dim))
             elif orient == 2:
-                frames.append(image.getFrame(orient=2))
+                frames.append(image.getFrame(orient=2, max_dim = self.max_dim))
 
         # alphas = np.array(alphas)
         # alphas = alphas / np.sum(alphas)
 
-        frame = np.zeros(frames[0].shape, dtype=np.float32)
-
         for frame_, alpha_ in zip(frames, alphas):
             # frame = frame + frame_ * alpha_
-            frame = frame + frame_ * alpha_
+            self.frame_f = self.frame_f + frame_ * alpha_
 
-        frame = cv2.cvtColor(frame.astype(np.uint8), cv2.COLOR_BGR2RGB)
-        frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_LINEAR)
-        frame = Image.fromarray(frame)
-        frame = ImageTk.PhotoImage(frame)
-
-        self.frame = frame
+        self.frame_i = cv2.cvtColor(self.frame_f.astype(np.uint8), cv2.COLOR_BGR2RGB)
+        # frame = cv2.resize(frame, (self.width, self.height), interpolation=cv2.INTER_LINEAR)
+        self.frame_i = Image.fromarray(self.frame_i)
+        self.frame_i = ImageTk.PhotoImage(self.frame_i)
 
 
-        self.canavas.create_image(self.center_x, self.center_y,image = self.frame)
+
+        self.canavas.create_image(self.center_x, self.center_y,image = self.frame_i)
         self.canavas.pack()

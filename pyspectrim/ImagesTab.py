@@ -88,7 +88,7 @@ class ImagesTab(tk.Frame):
         self.imagesTree.focus_set()
         self.imagesTree.focus(objectId)
 
-        self.setFocus(self.imagesList[-1])
+        self.set_image_on_focus(self.imagesList[-1])
 
         # Draw what's to be drawn
         self.app.cinema.imagePanel.draw()
@@ -102,7 +102,7 @@ class ImagesTab(tk.Frame):
         code = self.imagesTree.selection()[0]
         for image in self.imagesList:
             if code == image.tree_id:
-                self.setFocus(image)
+                self.set_image_on_focus(image)
 
     def closeImage(self):
         code = self.imagesTree.selection()[0]
@@ -133,9 +133,9 @@ class ImagesTab(tk.Frame):
         finally:
             self.imagesTree.popup_menu.grab_release()
 
-    def setFocus(self, image):
+    def set_image_on_focus(self, image):
         self.app.contextTabs.cleanContext()
-        self.app.contextTabs.setContext(image)
+        self.app.contextTabs.set_context(image)
 
     # Context menu handle functions
 

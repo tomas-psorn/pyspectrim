@@ -30,7 +30,7 @@ class PySpectrim():
         self.root.config(menu=self.main_menu)
         self.file_menu = Menu(self.main_menu, tearoff=0)
 
-        self.file_menu.add_command(label="Mount H5 file",command= lambda: self.contentTabs.filesTab.mounth5dir(self))
+        self.file_menu.add_command(label="Mount H5 file",command=self.contentTabs.filesTab.mount_h5_dir)
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exit", command=self._quit)
 
