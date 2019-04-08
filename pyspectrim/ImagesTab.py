@@ -3,6 +3,10 @@ from pyspectrim.Image import Image
 import tkinter as tk
 from tkinter import ttk
 
+import logging
+
+import gc
+
 def getImageSizeStr(image):
 
     sizeStr = ''
@@ -16,11 +20,10 @@ def getImageSizeStr(image):
 
 class ImagesTab(tk.Frame):
 
-    imagesList = []
-    imagesOnFocus = []
-    imagesVisibleList = []
-
     def __init__(self, contentTabs):
+
+        self.images_list = []
+        self.images_vis_list = []
 
         self.contentTabs = contentTabs
         self.app = self.contentTabs.app
@@ -41,28 +44,33 @@ class ImagesTab(tk.Frame):
         self.imagesTree.heading('dtype', text='Data type')
         self.imagesTree.heading('visibility', text='Visible')
 
-        self.imagesTree.bind("<Button-1>", self.OnClick)
+        self.imagesTree.bind("<Button-1>", self.on_click)
         self.imagesTree.bind("<Key>", self.on_key_enter)
 
         self.imagesTree.popup_menu = tk.Menu(self.imagesTree, tearoff=0)
-        self.imagesTree.popup_menu.add_command(label="Set visible", command= lambda: self.setImageVisibility(1.0))
-        self.imagesTree.popup_menu.add_command(label="Set invisible", command= lambda: self.setImageVisibility(0.0))
+        self.imagesTree.popup_menu.add_command(label="Set visible", command= lambda: self.set_im_vis(1.0))
+        self.imagesTree.popup_menu.add_command(label="Set invisible", command= lambda: self.set_im_vis(0.0))
         self.imagesTree.popup_menu.add_separator()
-        self.imagesTree.popup_menu.add_command(label="Close", command=self.closeImage)
+        self.imagesTree.popup_menu.add_command(label="Close", command=self.close_image)
         self.imagesTree.bind("<Button-3>", self.popupContextMenu)
 
         self.imagesTree.pack()
 
     # getters
-    def getVisible(self):
-        return self.imagesVisibleList
+    def get_visible(self):
+        return self.images_vis_list
 
     def get_image_on_focus(self):
-        for image in self.imagesList:
+        for image in self.images_list:
             if image.tree_id == self.imagesTree.focus():
                 return image
+            elif image.tree_id == self.imagesTree.selection()[0] and len(self.imagesTree.selection()[0]) == 1:
+                return image
 
-        # return (image for image in self.imagesList if image.tree_id == self.imagesTree.focus)
+    # setters
+    def set_image_on_focus(self, image):
+        self.imagesTree.focus(image.tree_id)
+        self.app.contextTabs.update_context()
 
     def insertImage(self, image_code, dataset):
 
@@ -72,8 +80,8 @@ class ImagesTab(tk.Frame):
             return
 
         # Insert new image to images list
-        self.imagesList.append(Image(dataset))
-        self.imagesVisibleList.append(self.imagesList[-1])
+        self.images_list.append(Image(dataset))
+        self.images_vis_list.append(self.images_list[-1])
         self.setIndexPhysSwitch()
 
         self.app.contentTabs.select(self)
@@ -81,14 +89,11 @@ class ImagesTab(tk.Frame):
         # Insert new image to images tree & configure
         objectId = getH5Id(dataset)
         self.imagesTree.insert('',tk.END, objectId, text=dataset.name)
-        self.imagesTree.set(objectId, 'size',getImageSizeStr(self.imagesList[-1]))
+        self.imagesTree.set(objectId, 'size',getImageSizeStr(self.images_list[-1]))
         self.imagesTree.set(objectId, 'dtype',self.dataset.dtype)
-        self.imagesTree.set(objectId, 'visibility',self.imagesList[-1].isVisible())
+        self.imagesTree.set(objectId, 'visibility',self.images_list[-1].isVisible())
         self.imagesTree.selection_set(objectId)
-        self.imagesTree.focus_set()
-        self.imagesTree.focus(objectId)
-
-        self.set_image_on_focus(self.imagesList[-1])
+        self.set_image_on_focus(self.images_list[-1])
 
         # Draw what's to be drawn
         self.app.cinema.imagePanel.draw()
@@ -98,65 +103,69 @@ class ImagesTab(tk.Frame):
         if event.keysym == 'Delete':
             self.closeImage()
 
-    def OnClick(self, event):
-        code = self.imagesTree.selection()[0]
-        for image in self.imagesList:
-            if code == image.tree_id:
-                self.set_image_on_focus(image)
+    def on_click(self, event):
+        self.contentTabs.select(self)
+        self.imagesTree.focus_set()
+        self.imagesTree.focus(self.imagesTree.identify_row(event.y))
+        # self.imagesTree.selection_add(self.imagesTree.identify_row(event.y))
+        # self.set_image_on_focus(image)
+        self.app.contextTabs.update_context()
 
-    def closeImage(self):
-        code = self.imagesTree.selection()[0]
-        self.app.contextTabs.cleanContext()
+    def close_image(self):
 
-        for image in self.imagesList:
+        code = self.imagesTree.selection()[0]
+
+
+        for image in self.images_list:
             if image.tree_id == code:
-                self.imagesList.remove(image)
-                print("Image ", code, " deleted from the list")
+                if image in self.images_list:
+                    self.images_list.remove(image)
+                if image in self.images_vis_list:
+                    self.images_vis_list.remove(image)
+                del image
+
+                logging.info("Image {} deleted from the list".format(code))
 
 
         self.imagesTree.delete(code)
+        self.app.contextTabs.update_context()
         self.app.cinema.imagePanel.draw()
-        self.app.contextTabs.cleanContext()
-        print("Image ", code, " deleted from the tree")
+        logging.info("Image {} deleted from the tree".format(code))
+
 
     def popupContextMenu(self, event):
-
         try:
             code = self.imagesTree.selection()[0]
-
         except IndexError:
             return
-
 
         try:
             self.imagesTree.popup_menu.tk_popup(event.x_root, event.y_root, 0)
         finally:
             self.imagesTree.popup_menu.grab_release()
 
-    def set_image_on_focus(self, image):
-        self.app.contextTabs.cleanContext()
-        self.app.contextTabs.set_context(image)
+
 
     # Context menu handle functions
 
-    def setImageVisibility(self, value):
+    def set_im_vis(self, value):
         code = self.imagesTree.selection()[0]
-        for image in self.imagesList:
+        for image in self.images_list:
             if image.tree_id == code:
-                if image.visibility == 0.0 and value > 0.0:
-                    image.visibility = value
-                    self.imagesVisibleList.append(image)
+                image.visibility = value
 
-                elif image.visibility > 0.0 and value == 0.0:
-                    image.visibility = value
-                    self.imagesVisibleList.remove(image)
+                if value == 0.0:
+                    self.imagesTree.set(code, 'visibility','False')
+                    if image in self.images_vis_list:
+                        self.images_vis_list.remove(image)
+                else:
+                    self.imagesTree.set(code, 'visibility', 'True')
+                    if image not in self.images_vis_list:
+                        self.images_vis_list.append(image)
 
-        self.app.contextTabs.setContext(image)
+        self.app.contextTabs.update_context()
+        self.app.cinema.imagePanel.draw()
 
-        if value == 0.0:
-            self.imagesTree.set(code, 'visibility','False')
-        else:
-            self.imagesTree.set(code, 'visibility', 'True')
 
     def setIndexPhysSwitch(self):
         if self.dimConsistCheck():
@@ -168,11 +177,11 @@ class ImagesTab(tk.Frame):
 
     def dimConsistCheck(self):
         """
-        :return: boolean value indicating whether the images in imagesVisibleList
+        :return: boolean value indicating whether the images in images_vis_list
         are geometrically consistent
         """
-        for image1 in self.imagesVisibleList:
-            for image2 in self.imagesVisibleList:
+        for image1 in self.images_vis_list:
+            for image2 in self.images_vis_list:
                 if image1.dim_size != image2.dim_size:
                     return False
         return True

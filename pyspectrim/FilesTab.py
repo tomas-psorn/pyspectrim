@@ -121,9 +121,7 @@ class FilesTab(tk.Frame):
                 self.addEntry(object[key], getH5Id(object))
 
     def mount_h5_dir(self):
-        print("one")
         path = filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("h5 files","*.h5"),))
-        print("two")
 
         logging.info("Mounting: {}".format(path))
 

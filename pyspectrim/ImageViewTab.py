@@ -7,8 +7,6 @@ class ImageViewTab(tk.Frame):
         self.app = contextTabs.app
         self.contextTabs = contextTabs
 
-        self.image = None
-
         super().__init__(self.contextTabs)
         self.contextTabs.add(self, text="Image view")
 
@@ -17,16 +15,17 @@ class ImageViewTab(tk.Frame):
         self.imageOrientSwitch = ImageOrientSwitch(self)
         self.colorMapOptions = ColorMapOption(self)
 
-        self.bind("<Visibility>", self.on_visibility)
+        self.bind("<Visibility>", self.on_visible)
 
     # event handlers
-    def on_visibility(self, event):
+    def on_visible(self, event=None):
         self.update()
 
     def update(self):
-        self.image = self.app.contentTabs.imagesTab.get_image_on_focus()
-        self.alphaSlider.set(self.image.visibility)
-
+        image = self.app.contentTabs.imagesTab.get_image_on_focus()
+        if image:
+            self.alphaSlider.set_image(image)
+            self.colorMapOptions.set_image(image)
 
 
     # setters, getters
@@ -37,7 +36,7 @@ class ImageViewTab(tk.Frame):
         return self.imageOrientSwitch.value.get()
 
     def getColorMap(self):
-        return self.colorMapOptions.value.get()
+        return self.colorMapOptions.value
 
     def lockIndPhysSwitch(self,value):
         self.indPhysSwitch.lock(value)
@@ -59,6 +58,8 @@ class AlphaSlider(tk.Scale):
         self.tab = tab
         self.app = tab.app
 
+        self.image = None
+
         self.value = tk.DoubleVar()
         self.layout = tk.LabelFrame(self.tab, text='Visibility')
 
@@ -79,15 +80,30 @@ class AlphaSlider(tk.Scale):
 
     # event handlers
     def drag(self, event):
-        self.tab.image.visibility = self.get()
+        value = self.get()
+
+        if self.image.visibility == 0.0 and value > 0.0:
+            self.app.contentTabs.imagesTab.imagesTree.set(self.image.tree_id, 'visibility', 'True')
+            self.app.contentTabs.imagesTab.images_vis_list.append(self.image)
+        elif self.image.visibility > 0.0 and value == 0.0:
+            self.app.contentTabs.imagesTab.imagesTree.set(self.image.tree_id, 'visibility', 'False')
+            self.app.contentTabs.imagesTab.images_vis_list.remove(self.image)
+
+        self.image.visibility = value
         self.app.cinema.imagePanel.draw()
 
+    def set_image(self,image):
+        self.image = image
+        self.set(image.visibility)
+
+
+    def free_image(self):
+        self.image = None
 
     def set(self,value):
         self.value.set(value)
-        image = self.app.contentTabs.imagesTab.get_image_on_focus()
-        if image:
-            image.visibility = value
+        if self.image:
+            self.image.visibility = value
 
 
 class IndPhysSwitch():
@@ -184,6 +200,7 @@ class ColorMapOption(tk.OptionMenu):
 
         self.tab = tab
         self.app = tab.app
+        self.image = None
 
         self.optionsList = ('gray', 'winter','jet')
 
@@ -197,7 +214,13 @@ class ColorMapOption(tk.OptionMenu):
         self.pack(anchor=tk.W)
         self.layout.pack(fill=tk.X)
 
+    def set_image(self,image):
+        self.image = image
+        self.value = image.colormap
+
+    def free_image(self):
+        self.image = None
+
     def set(self, value):
-        image = self.app.contentTabs.imagesTab.get_image_on_focus()
-        image.colormap = value
+        self.image.colormap = value
         self.app.cinema.imagePanel.draw()

@@ -14,15 +14,24 @@ class PositionTab(tk.Frame):
 
         self.sliders = []
 
+        self.bind("<Visibility>", self.on_visible)
 
-    def setPosSliders(self, image):
+
+    def set_pos_sliders(self, image):
         for i in range(0, image.ndim):
           self.sliders.append(PositionSlider(self, image=image, dim_order = i))
 
-    def cleanPosSliders(self):
+    def clear_pos_sliders(self):
         for slider in self.sliders:
             slider.destroy_()
         self.sliders = []
+
+    def on_visible(self,event=None):
+        self.clear_pos_sliders()
+        image = self.app.contentTabs.imagesTab.get_image_on_focus()
+
+        if image:
+            self.set_pos_sliders(self.app.contentTabs.imagesTab.get_image_on_focus())
 
 class PositionSlider(tk.Scale):
 
@@ -136,3 +145,5 @@ class PositionSlider(tk.Scale):
 
     def destroy_(self):
         self.layout.destroy()
+
+

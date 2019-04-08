@@ -11,7 +11,7 @@ import h5py
 
 import matplotlib.pyplot as plt
 
-class Image():
+class Image(object):
     def __init__(self, dataset):
 
         self.tree_id = getH5Id(dataset)
@@ -41,6 +41,7 @@ class Image():
         self.max = np.amax(self.data)
 
         self.aspect = self.dim_phys_extent / np.amax(self.dim_phys_extent)
+
 
     # properties
     @property
@@ -97,6 +98,11 @@ class Image():
         frame = self.applyColormap(frame)
 
         return frame
+
+    def get_pixel_info(self, x_canvas, y_canvas, orient):
+        # todo implement
+        return 0.5,1.5,5.5,10.22
+
 
     # Handling position
 

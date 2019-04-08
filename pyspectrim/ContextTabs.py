@@ -16,13 +16,13 @@ class ContextTabs(ttk.Notebook):
         self.imageViewTab = ImageViewTab(self)
         self.loggerTab = LoggerTab(self)
 
-    def set_context(self, image):
-        print(self.focus)
-        self.cleanContext()
-        self.positionTab.setPosSliders(image)
-        # self.imageViewTab.setAlpha(image)
-        self.app.contentTabs.imagesTab.setIndexPhysSwitch()
+    def update_context(self):
+        current_tab = self.tab(self.select(),'text')
 
-    def cleanContext(self):
-        self.positionTab.cleanPosSliders()
-        self.imageViewTab.clean()
+        if current_tab == "Position":
+            self.positionTab.on_visible()
+        elif current_tab == "Image view":
+            self.imageViewTab.on_visible()
+        elif current_tab == "Logger":
+            pass
+
