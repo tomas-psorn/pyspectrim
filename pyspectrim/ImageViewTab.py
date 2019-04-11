@@ -14,18 +14,21 @@ class ImageViewTab(tk.Frame):
         self.indPhysSwitch = IndPhysSwitch(self)
         self.imageOrientSwitch = ImageOrientSwitch(self)
         self.colorMapOptions = ColorMapOption(self)
+        self.contrastEnhance = ContrastEnhance(self)
 
-        self.bind("<Visibility>", self.on_visible)
 
     # event handlers
     def on_visible(self, event=None):
         self.update()
+
+
 
     def update(self):
         image = self.app.contentTabs.imagesTab.get_image_on_focus()
         if image:
             self.alphaSlider.set_image(image)
             self.colorMapOptions.set_image(image)
+            self.contrastEnhance.set_image(image)
 
 
     # setters, getters
@@ -224,3 +227,114 @@ class ColorMapOption(tk.OptionMenu):
     def set(self, value):
         self.image.colormap = value
         self.app.cinema.imagePanel.draw()
+
+
+class ContrastEnhance():
+    def __init__(self, tab):
+
+        self.tab = tab
+        self.app = tab.app
+        self.image = None
+
+        self.layout = tk.LabelFrame(self.tab, text='Contrast enhance')
+        self.layout.pack(fill=tk.X)
+
+        self.min_var = tk.StringVar()
+        self.max_var = tk.StringVar()
+        self.clip_stretch_var = tk.BooleanVar()
+
+        # The default enhancement mode is clip
+        self.clip_stretch_var.set(True)
+        #
+        # self.min_var.trace('w',callback=self.set_min)
+        # self.max_var.trace('w', callback=self.set_max)
+
+        self.min_entry = tk.Entry(self.layout, textvariable=self.min_var)
+        self.max_entry = tk.Entry(self.layout, textvariable=self.max_var)
+        self.apply_button = tk.Button(self.layout, text="Apply to data")
+        self.hist_norm_button = tk.Button(self.layout, text="Normalize histogram", command=self.hist_norm)
+
+        self.stretch_button = tk.Radiobutton(self.layout,
+                                    text='stretch',
+                                    variable=self.clip_stretch_var,
+                                    value=0,
+                                    command=self.on_switch_click
+                                    )
+
+        self.clip_button = tk.Radiobutton(self.layout,
+                                    text='clip',
+                                    variable=self.clip_stretch_var,
+                                    value=1,
+                                    command=self.on_switch_click
+                                    )
+
+        self.min_entry.bind('<Return>', self.set_min)
+        self.max_entry.bind('<Return>', self.set_max)
+
+        self.min_label = tk.Label(self.layout, text="min:")
+        self.max_label = tk.Label(self.layout, text="max:")
+
+        self.min_label.grid(row=0,column=0)
+        self.min_entry.grid(row=0,column=1)
+        self.max_label.grid(row=0,column=2)
+        self.max_entry.grid(row=0,column=3)
+        self.clip_button.grid(row=1,column=0, columnspan=2)
+        self.stretch_button.grid(row=1,column=2, columnspan=2)
+
+
+        # self.min_label.pack(side=tk.LEFT)
+        # self.min_entry.pack(side=tk.LEFT)
+        # self.max_label.pack(side=tk.LEFT)
+        # self.max_entry.pack(side=tk.LEFT)
+        # self.stretch_button.pack(side=tk.BOTTOM)
+        # self.clip_button.pack(side=tk.BOTTOM)
+
+
+        self.apply_button.grid(row=2,column=0, columnspan=2)
+        self.hist_norm_button.grid(row=2,column=2, columnspan=2)
+
+    def on_switch_click(self):
+        print("sw click")
+        self.app.cinema.imagePanel.draw()
+
+    def set_image(self,image):
+        self.image = image
+        self.min_var.set(str(self.image.min_preview))
+        self.max_var.set(str(self.image.max_preview))
+
+    def free_image(self):
+        self.image = None
+
+    def set_min(self, event):
+        if self.image:
+            value = float(self.min_var.get())
+            # If value entered is lower than data minimum
+            if value < self.image.min_data or value > float(self.max_var.get()):
+                # write the minimal value into the entry
+                self.min_var.set(str(self.image.min_data))
+                self.image.min_preview = self.image.min_data
+            else:
+                self.image.min_preview = value
+
+            self.app.cinema.imagePanel.draw()
+
+    def set_max(self, event):
+        if self.image:
+            value = float(self.max_var.get())
+            # If value entered is lower than data minimum
+            if value > self.image.max_data or value < float(self.min_var.get()):
+                # write the minimal value into the entry
+                self.max_var.set(str(self.image.max_data))
+                self.image.max_preview = self.image.max_data
+            else:
+                self.image.max_preview = value
+
+            self.app.cinema.imagePanel.draw()
+
+    def hist_norm(self):
+        if self.image:
+            self.image.hist_norm()
+            self.app.cinema.imagePanel.draw()
+
+        self.min_var.set(str(self.image.min_preview))
+        self.max_var.set(str(self.image.max_preview))

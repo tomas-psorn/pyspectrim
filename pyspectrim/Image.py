@@ -12,7 +12,9 @@ import h5py
 import matplotlib.pyplot as plt
 
 class Image(object):
-    def __init__(self, dataset):
+    def __init__(self, app, dataset):
+
+        self.app = app
 
         self.tree_id = getH5Id(dataset)
         self.data = np.array(dataset)
@@ -37,8 +39,11 @@ class Image(object):
         self._visibility = 1.0
         self._colormap = cv2.COLORMAP_BONE
 
-        self.min = np.amin(self.data)
-        self.max = np.amax(self.data)
+        self.min_data = np.amin(self.data)
+        self.max_data = np.amax(self.data)
+
+        self.min_preview = self.min_data
+        self.max_preview = self.max_data
 
         self.aspect = self.dim_phys_extent / np.amax(self.dim_phys_extent)
 
@@ -92,6 +97,7 @@ class Image(object):
             print("Unknown orientation")
             return None
 
+        frame = self.apply_preview(frame)
         frame = self.frame_to_0_255(frame)
         frame = frame * self.visibility
         frame = self.resize(frame.astype(np.uint8), export_size)
@@ -128,9 +134,18 @@ class Image(object):
             return "False"
 
     # Image manipulation
+    def apply_preview(self,frame):
+        clip_stretch_switch = self.app.contextTabs.imageViewTab.contrastEnhance.clip_stretch_var.get()
+        if clip_stretch_switch is True:
+            return np.clip(frame,self.min_preview,self.max_preview)
+        else:
+            range_data = self.max_data - self.min_data
+            range_preview = self.max_preview - self.min_preview
+            return self.min_preview + (range_preview * (frame - self.min_data) / range_data)
+
     def frame_to_0_255(self, frame):
-        255.0 * frame / self.max
-        return 255.0 * frame / self.max
+        255.0 * frame / self.max_data
+        return 255.0 * frame / self.max_data
 
     def applyColormap(self,frame):
         return cv2.applyColorMap(frame, self.colormap)
@@ -138,4 +153,22 @@ class Image(object):
     def resize(self,frame, export_size):
         return cv2.resize(frame, export_size, interpolation=cv2.INTER_LINEAR)
 
+    def hist_norm(self):
+        # num_bins = int(np.log(np.prod(self.dim_size)))
+        num_bins = 256
+        data = self.data
+        imhist, bins= np.histogram(data.flatten(), num_bins, normed=True)
+        cdf = imhist.cumsum()  # cumulative distribution function
+        cdf = 255 * cdf / cdf[-1]  # normalize
+
+        # use linear interpolation of cdf to find new pixel values
+        data_= np.interp(data.flatten(), bins[:-1], cdf)
+
+        self.data = data_.reshape(data.shape)
+
+        self.min_data = np.amin(self.data)
+        self.max_data = np.amax(self.data)
+
+        self.min_preview = self.min_data
+        self.max_preview = self.max_data
 

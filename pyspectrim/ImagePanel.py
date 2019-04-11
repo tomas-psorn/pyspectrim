@@ -19,9 +19,6 @@ class ImagePanel():
         self.cinema = cinema
         self.app = self.cinema.app
 
-
-
-
         # todo relate to window size
         self.max_dim = 400
 

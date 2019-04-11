@@ -80,7 +80,7 @@ class ImagesTab(tk.Frame):
             return
 
         # Insert new image to images list
-        self.images_list.append(Image(dataset))
+        self.images_list.append(Image(self.app,dataset))
         self.images_vis_list.append(self.images_list[-1])
         self.setIndexPhysSwitch()
 
