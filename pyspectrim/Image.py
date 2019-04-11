@@ -172,3 +172,31 @@ class Image(object):
         self.min_preview = self.min_data
         self.max_preview = self.max_data
 
+    def apply_enhance(self):
+        clip_stretch_switch = self.app.contextTabs.imageViewTab.contrastEnhance.clip_stretch_var.get()
+        if clip_stretch_switch is True:
+            self.data = np.clip(self.data,self.min_preview,self.max_preview)
+            self.min_data = np.amin(self.data)
+            self.max_data = np.amax(self.data)
+            self.min_preview = self.min_data
+            self.max_preview = self.max_data
+
+        else:
+            range_data = self.max_data - self.min_data
+            range_preview = self.max_preview - self.min_preview
+            self.data = range_preview * (self.data - self.min_data) / range_data
+            self.min_data = np.amin(self.data)
+            self.max_data = np.amax(self.data)
+            self.min_preview = self.min_data
+            self.max_preview = self.max_data
+
+
+    def reload_data(self):
+        for file in self.app.contentTabs.filesTab.filesList:
+            if file.filename in self.tree_id:
+                self.data = np.array(file.file[self.tree_id.split(".h5")[1]])
+                self.data = np.squeeze(self.data) #todo remove this after debugging jcamdx parser
+                self.min_data = np.amin(self.data)
+                self.max_data = np.amax(self.data)
+                self.min_preview = self.min_data
+                self.max_preview = self.max_data

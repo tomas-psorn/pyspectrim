@@ -251,7 +251,7 @@ class ContrastEnhance():
 
         self.min_entry = tk.Entry(self.layout, textvariable=self.min_var)
         self.max_entry = tk.Entry(self.layout, textvariable=self.max_var)
-        self.apply_button = tk.Button(self.layout, text="Apply to data")
+        self.apply_button = tk.Button(self.layout, text="Apply to data", command=self.apply_enhance)
         self.hist_norm_button = tk.Button(self.layout, text="Normalize histogram", command=self.hist_norm)
 
         self.stretch_button = tk.Radiobutton(self.layout,
@@ -294,7 +294,6 @@ class ContrastEnhance():
         self.hist_norm_button.grid(row=2,column=2, columnspan=2)
 
     def on_switch_click(self):
-        print("sw click")
         self.app.cinema.imagePanel.draw()
 
     def set_image(self,image):
@@ -334,7 +333,17 @@ class ContrastEnhance():
     def hist_norm(self):
         if self.image:
             self.image.hist_norm()
-            self.app.cinema.imagePanel.draw()
+            self.min_var.set(str(self.image.min_preview))
+            self.max_var.set(str(self.image.max_preview))
 
-        self.min_var.set(str(self.image.min_preview))
-        self.max_var.set(str(self.image.max_preview))
+            self.app.cinema.imagePanel.draw()
+            self.app.contextTabs.update_context()
+
+    def apply_enhance(self):
+        if self.image:
+            self.image.apply_enhance()
+
+        self.app.contextTabs.update_context()
+        self.app.cinema.imagePanel.draw()
+
+

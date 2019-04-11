@@ -48,6 +48,8 @@ class ImagesTab(tk.Frame):
         self.imagesTree.bind("<Key>", self.on_key_enter)
 
         self.imagesTree.popup_menu = tk.Menu(self.imagesTree, tearoff=0)
+        self.imagesTree.popup_menu.add_command(label="Reload", command=self.reload_image_data)
+        self.imagesTree.popup_menu.add_separator()
         self.imagesTree.popup_menu.add_command(label="Set visible", command= lambda: self.set_im_vis(1.0))
         self.imagesTree.popup_menu.add_command(label="Set invisible", command= lambda: self.set_im_vis(0.0))
         self.imagesTree.popup_menu.add_separator()
@@ -187,4 +189,8 @@ class ImagesTab(tk.Frame):
         return True
 
 
-
+    def reload_image_data(self):
+        image = self.get_image_on_focus()
+        image.reload_data()
+        self.app.contextTabs.update_context()
+        self.app.cinema.imagePanel.draw()
