@@ -36,7 +36,7 @@ class LoggerTab(tk.Frame):
         super().__init__(self.contextTabs)
 
         self.contextTabs.add(self, text="Log")
-        self.layout = tk.LabelFrame(self, text='Log')
+        self.layout = tk.Frame(self)
 
         self.layout.grid(column=0, row=0, sticky='ew')
         self.layout.grid_columnconfigure(0, weight=1, uniform='a')
