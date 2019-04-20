@@ -19,6 +19,10 @@ class ContextTabs(ttk.Notebook):
     def update_context(self):
         current_tab = self.tab(self.select(),'text')
 
+        # state dependent - must be updated allways
+        self.imageViewTab.indPhysSwitch.update()
+
+        # image dependent
         if current_tab == "Position":
             self.positionTab.on_visible()
         elif current_tab == "Image view":

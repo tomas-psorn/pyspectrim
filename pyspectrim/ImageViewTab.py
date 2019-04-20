@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+from enum import Enum
+
 
 class ImageViewTab(tk.Frame):
     def __init__(self, contextTabs):
@@ -121,10 +123,10 @@ class IndPhysSwitch():
 
         # super().__init__(self.tab, text="Viewing mode")
 
-        self.physSwitch = tk.Radiobutton(self.layout, text='physical', variable=self.value, value=0, command= lambda : self.set('phys'))
-        self.indSwitch = tk.Radiobutton(self.layout, text='indexed', variable=self.value, value=1, command=lambda : self.set('ind'))
+        self.physSwitch = tk.Radiobutton(self.layout, text='physical', variable=self.value, value=1, command= lambda : self.set(IND_PHYS.PHYS.value))
+        self.indSwitch = tk.Radiobutton(self.layout, text='indexed', variable=self.value, value=0, command=lambda : self.set(IND_PHYS.IND.value))
 
-        self.value.set(1)
+        self.value.set(IND_PHYS.IND.value)
 
         self.indSwitch.grid(column=0, row =0)
         self.physSwitch.grid(column=1, row =0)
@@ -134,10 +136,19 @@ class IndPhysSwitch():
     def set(self, value):
         # todo
         #  if switched to indexed redraw
-        if value == 'ind':
-            self.value.set(1)
-        elif value == 'phys':
-            self.value.set(0)
+        self.value.set(value)
+
+    def get(self):
+        return self.value.get()
+
+    def update(self):
+        if self.app.contentTabs.imagesTab.dimConsistCheck():
+            self.app.contextTabs.imageViewTab.setIndPhys(IND_PHYS.IND.value)
+            self.app.contextTabs.imageViewTab.lockIndPhysSwitch(False)
+        else:
+            self.app.contextTabs.imageViewTab.lockIndPhysSwitch(True)
+            self.app.contextTabs.imageViewTab.setIndPhys(IND_PHYS.PHYS.value)
+
 
     def lock(self,value):
         if value == True:
@@ -148,6 +159,8 @@ class IndPhysSwitch():
             self.indSwitch['state'] = 'normal'
             self.physSwitch['state'] = 'normal'
 
+class IND_PHYS(Enum):
+    IND, PHYS = range(2)
 
 class ImageOrientSwitch():
     def __init__(self, tab):

@@ -1,5 +1,7 @@
 from pyspectrim.File import getH5Id
 
+from ImageViewTab import IND_PHYS
+
 import logging
 
 import tkinter as tk
@@ -18,23 +20,43 @@ class Image(object):
 
         self.tree_id = getH5Id(dataset)
         self.data = np.array(dataset)
-        self.data = np.squeeze(self.data)
 
-        self.dim_size = self.data.shape
-        self.ndim = len(self.dim_size)
+        self.dim_size = np.array(dataset.attrs['dim_size'])
+        self.ndim = dataset.attrs['ndim']
+
         self.dim_label = ['x','y','z']
+        self.dim_from_phys = np.array(dataset.attrs['slice_pos'][0, :])
 
-        self.dim_from = np.array([0,0,0])
-        self.dim_from_phys = np.array([0.0, 0.0, 0.0])
+        for i in range(0,self.ndim-3):
+            self.dim_label.append(dataset.attrs['dim_desc'][i+3].decode('UTF-8'))
+            self.dim_from_phys = np.append(self.dim_from_phys, 0.0)
 
-        self.dim_to = np.array([self.dim_size[0], self.dim_size[1], self.dim_size[2]])
-        self.dim_to_phys = np.array([25.6,25.6, 20.0])
+        self.dim_phys_extent = np.array(dataset.attrs['dim_extent'])
+        self.dim_to_phys = self.dim_from_phys + self.dim_phys_extent
 
-        self.dim_spacing = np.array([0.1, 0.1, 0.5])
+        self.dim_from = np.zeros(shape=(self.ndim,),dtype=np.int32)
+        self.dim_to = self.dim_size
 
-        self.dim_phys_extent = self.dim_size * self.dim_spacing
+        # todo include slice spacing
+        self.dim_spacing = self.dim_phys_extent / self.dim_size
 
-        self.dim_pos = [ int(self.dim_size[0]/2), int(self.dim_size[1]/2), int(self.dim_size[2]/2) ]
+        # there must be better way to do this
+        self.dim_units = dataset.attrs['dim_units'].tolist()
+        for i in range(0,len(self.dim_units)):
+            self.dim_units[i] = self.dim_units[i].decode()
+
+
+        for key in dataset.attrs:
+            if "comment" in key:
+                comment = dataset.attrs[key].tolist()
+                for i in range(0,len(comment)):
+                    comment[i] = comment[i].decode()
+
+                setattr(self, key, comment)
+
+        # set initial browsing position, spatial dimenstions to the middle, all other to zero
+        self.dim_pos = (self.dim_size / 2).astype(np.int32)
+        self.dim_pos[3:] = 0
 
         self._visibility = 1.0
         self._colormap = cv2.COLORMAP_BONE
@@ -46,6 +68,11 @@ class Image(object):
         self.max_preview = self.max_data
 
         self.aspect = self.dim_phys_extent / np.amax(self.dim_phys_extent)
+
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
 
 
     # properties
@@ -81,26 +108,31 @@ class Image(object):
     # getters
     def getFrame(self, **kwargs):
 
-        # coronal
-        if kwargs['orient'] == 0:
-            frame = self.data[:, :, self.dim_pos[2]]
-            export_size = ( int(kwargs['max_dim'] * self.aspect[0]) , int(kwargs['max_dim'] * self.aspect[1]) )
-        # sagital
-        elif kwargs['orient'] == 1:
-            frame = self.data[self.dim_pos[0],:, :]
-            export_size = (int(kwargs['max_dim'] * self.aspect[1]), int(kwargs['max_dim'] * self.aspect[2]))
-        # axial
-        elif kwargs['orient'] == 2:
-            frame = self.data[:,self.dim_pos[1], :]
-            export_size = (int(kwargs['max_dim'] * self.aspect[0]), int(kwargs['max_dim'] * self.aspect[2]))
-        else:
-            print("Unknown orientation")
-            return None
+        ind_phys_switch = IND_PHYS(self.app.contextTabs.imageViewTab.indPhysSwitch.get()).name
 
+        if ind_phys_switch == 'IND':
+            location_high = tuple(self.dim_pos[3:])
+            # coronal
+            if kwargs['orient'] == 0:
+                location = ( slice( 0, self.dim_size[0] ), slice( 0, self.dim_size[1] ), self.dim_pos[2] ) + location_high
+            # sagital
+            elif kwargs['orient'] == 1:
+                location = (self.dim_pos[0], slice(0, self.dim_size[1]), slice(0, self.dim_size[2])) + location_high
+            # axial
+            elif kwargs['orient'] == 2:
+                location = (slice(0, self.dim_size[0]), self.dim_pos[1], slice(0, self.dim_size[2])) + location_high
+            else:
+                print("Unknown orientation")
+                return None
+            frame = self.data[location]
+
+        # todo change to apply_enhancement
         frame = self.apply_preview(frame)
         frame = self.frame_to_0_255(frame)
         frame = frame * self.visibility
-        frame = self.resize(frame.astype(np.uint8), export_size)
+        frame = frame.astype(np.uint8)
+        # todo this has to be done on cinema level
+        # frame = self.resize(frame, export_size)
         frame = self.applyColormap(frame)
 
         return frame

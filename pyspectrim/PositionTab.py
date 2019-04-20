@@ -81,14 +81,23 @@ class PositionSlider(tk.Scale):
         self.playButton.bind("<Button-1>", self.playClick)
         self.playButton.grid(row=0, column = 5)
 
-        self.physIndSwtch = tk.IntVar()
-        self.physSwtch = tk.Radiobutton(self.layout, text='physical', variable=self.physIndSwtch, value=1, command=self.setPhysical)
-        self.physSwtch.grid(row=0, column = 6)
-        self.indSwtch = tk.Radiobutton(self.layout, text='index', variable=self.physIndSwtch, value=0, command=self.setIndexed)
-        self.indSwtch.grid(row=0, column = 7)
+        self.pos_info = tk.StringVar()
+        self.pos_info_frame = tk.Entry(self.layout, textvariable=self.pos_info)
+        self.pos_info_frame.config(state=tk.DISABLED)
+        self.update_pos_info()
+        self.pos_info_frame.grid(row=0, column = 6)
 
         self.layout.pack()
 
+    def update_pos_info(self):
+        if "comment" in self.image.dim_units[self.dim_order]:
+            comment_list = self.image[self.image.dim_units[self.dim_order]]
+            string = comment_list[self.image.dim_pos[self.dim_order]]
+        else:
+            phys_pos = self.image.dim_from_phys[self.dim_order] + self.image.dim_spacing[self.dim_order] * self.image.dim_pos[self.dim_order]
+            string = '{:.2f} {}'.format(phys_pos, self.image.dim_units[self.dim_order])
+
+        self.pos_info.set(string)
 
 
     def setLabel(self,text):
@@ -100,30 +109,36 @@ class PositionSlider(tk.Scale):
 
     def setPosition(self, value):
         self.set(value)
+        self.update_pos_info()
 
     def callback(self,event):
         # TODO
         self.image.dim_pos[self.dim_order] = self.value.get()
+        self.update_pos_info()
         self.app.cinema.imagePanel.draw()
 
     def leftClick(self, event):
         self.set(self.get()-1)
         self.image.decrementPosition(self.dim_order)
+        self.update_pos_info()
         self.app.cinema.imagePanel.draw()
 
     def rightClick(self, event):
         self.set(self.get()+1)
         self.image.incrementPosition(self.dim_order)
+        self.update_pos_info()
         self.app.cinema.imagePanel.draw()
 
     def beginClick(self, event):
         self.set(self.cget('from'))
         self.image.posToMin(self.dim_order)
+        self.update_pos_info()
         self.app.cinema.imagePanel.draw()
 
     def endClick(self, event):
         self.set(self.cget('to'))
         self.image.posToMax(self.dim_order)
+        self.update_pos_info()
         self.app.cinema.imagePanel.draw()
 
     def playClick(self,event):
@@ -131,17 +146,9 @@ class PositionSlider(tk.Scale):
         for i in range(int(self.get()), int(self.cget('to'))):
             self.set(self.get()+1)
             self.image.incrementPosition(self.dim_order)
+            self.update_pos_info()
             self.app.cinema.imagePanel.draw()
             time.sleep(0.5)
-
-    def setPhysical(self):
-        # TODO
-        self.from_ = self.image.dim_from_phys[self.dim_order]
-        self.to = self.image.dim_to_phys[self.dim_order]
-        self.resolution = self.image.dim_spacing[self.dim_order]
-
-    def setIndexed(self):
-        pass
 
     def destroy_(self):
         self.layout.destroy()

@@ -1,9 +1,12 @@
 from pyspectrim.File import getH5Id
 from pyspectrim.Image import Image
+
 import tkinter as tk
 from tkinter import ttk
 
 import logging
+
+import numpy as np
 
 import gc
 
@@ -84,7 +87,6 @@ class ImagesTab(tk.Frame):
         # Insert new image to images list
         self.images_list.append(Image(self.app,dataset))
         self.images_vis_list.append(self.images_list[-1])
-        self.setIndexPhysSwitch()
 
         self.app.contentTabs.select(self)
 
@@ -96,6 +98,9 @@ class ImagesTab(tk.Frame):
         self.imagesTree.set(objectId, 'visibility',self.images_list[-1].isVisible())
         self.imagesTree.selection_set(objectId)
         self.set_image_on_focus(self.images_list[-1])
+
+        # Update context
+        self.app.contextTabs.update_context()
 
         # Draw what's to be drawn
         self.app.cinema.imagePanel.draw()
@@ -168,15 +173,6 @@ class ImagesTab(tk.Frame):
         self.app.contextTabs.update_context()
         self.app.cinema.imagePanel.draw()
 
-
-    def setIndexPhysSwitch(self):
-        if self.dimConsistCheck():
-            self.app.contextTabs.imageViewTab.setIndPhys('ind')
-        else:
-            self.app.contextTabs.imageViewTab.lockIndPhysSwitch(True)
-            self.app.contextTabs.imageViewTab.setIndPhys('phys')
-
-
     def dimConsistCheck(self):
         """
         :return: boolean value indicating whether the images in images_vis_list
@@ -184,7 +180,7 @@ class ImagesTab(tk.Frame):
         """
         for image1 in self.images_vis_list:
             for image2 in self.images_vis_list:
-                if image1.dim_size != image2.dim_size:
+                if not np.array_equal(image1.dim_size, image2.dim_size):
                     return False
         return True
 
