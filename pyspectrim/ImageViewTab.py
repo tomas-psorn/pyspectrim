@@ -14,7 +14,7 @@ class ImageViewTab(tk.Frame):
 
         self.alphaSlider = AlphaSlider(self)
         self.indPhysSwitch = IndPhysSwitch(self)
-        self.imageOrientSwitch = ImageOrientSwitch(self)
+        self.view_orient_switch = ViewOrientSwitch(self)
         self.colorMapOptions = ColorMapOption(self)
         self.contrastEnhance = ContrastEnhance(self)
 
@@ -37,8 +37,8 @@ class ImageViewTab(tk.Frame):
     def setIndPhys(self,value):
         self.indPhysSwitch.set(value)
 
-    def getImageOrent(self):
-        return self.imageOrientSwitch.value.get()
+    def get_view_orient(self):
+        return self.view_orient_switch.value.get()
 
     def getColorMap(self):
         return self.colorMapOptions.value
@@ -162,7 +162,8 @@ class IndPhysSwitch():
 class IND_PHYS(Enum):
     IND, PHYS = range(2)
 
-class ImageOrientSwitch():
+class ViewOrientSwitch():
+    # scope - each image panel has its own
     def __init__(self, tab):
 
         self.tab = tab
@@ -175,22 +176,22 @@ class ImageOrientSwitch():
                                     text='coronal',
                                     variable=self.value,
                                     value=0,
-                                    command= lambda : self.set('axial'))
+                                    command= lambda : self.set(VIEW_ORIENT.AX.value))
 
         self.transversal = tk.Radiobutton(self.layout,
                                           text='sagital',
                                           variable=self.value,
                                           value=1,
-                                          command=lambda : self.set('transversal'))
+                                          command=lambda : self.set(VIEW_ORIENT.TRANS.value))
 
         self.sagital = tk.Radiobutton(self.layout,
                                       text='axial',
                                       variable=self.value,
                                       value=2,
-                                      command=lambda : self.set('sagital'))
+                                      command=lambda : self.set(VIEW_ORIENT.SAG.value))
 
         # default orientation is axial
-        self.value.set(0)
+        self.value.set(VIEW_ORIENT.AX.value)
 
         self.axial.grid(column=0, row =0)
         self.transversal.grid(column=1, row =0)
@@ -201,15 +202,12 @@ class ImageOrientSwitch():
     def set(self, value):
         # todo
         #  if switched to indexed redraw
-        if value == 'axial':
-            self.value.set(0)
-        elif value == 'transversal':
-            self.value.set(1)
-        elif value == 'sagital':
-            self.value.set(2)
+        self.value.set(value)
 
         self.app.cinema.imagePanel.draw()
 
+class VIEW_ORIENT(Enum):
+    AX, TRANS, SAG = range(3)
 
 class ColorMapOption(tk.OptionMenu):
     def __init__(self, tab):

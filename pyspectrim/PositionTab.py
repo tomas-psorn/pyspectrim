@@ -90,12 +90,12 @@ class PositionSlider(tk.Scale):
         self.layout.pack()
 
     def update_pos_info(self):
-        if "comment" in self.image.dim_units[self.dim_order]:
-            comment_list = self.image[self.image.dim_units[self.dim_order]]
-            string = comment_list[self.image.dim_pos[self.dim_order]]
-        else:
-            phys_pos = self.image.dim_from_phys[self.dim_order] + self.image.dim_spacing[self.dim_order] * self.image.dim_pos[self.dim_order]
-            string = '{:.2f} {}'.format(phys_pos, self.image.dim_units[self.dim_order])
+        label, pos_phys, units = self.image.get_pixel_info()
+
+        try:
+            string = '{:.2f} {}'.format(pos_phys[self.dim_order], units[self.dim_order])
+        except:
+            string = '{} {}'.format(pos_phys[self.dim_order], units[self.dim_order])
 
         self.pos_info.set(string)
 

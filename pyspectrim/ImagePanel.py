@@ -25,8 +25,9 @@ class ImagePanel():
         # used to fit the biggest dimension of any frame to max dim
         self.global_scale = 1.0
 
-        self.frame_f = np.zeros((self.max_dim,self.max_dim,3),dtype=np.float32)
-        self.frame_i = np.zeros((self.max_dim, self.max_dim,3), dtype=np.uint8)
+
+
+        #
         self.frame = None
 
         self.center_x = int(self.max_dim/2)
@@ -35,34 +36,37 @@ class ImagePanel():
         self.canvas = tk.Canvas(self.cinema, bg='black')
         self.canvas.config(width=self.max_dim, height=self.max_dim)
 
-        self.canvas.bind("<Button-3>", self.on_right_click)
+
+        # reference to text object indicating position and a value of pixel
 
         self.canvas.pack()
 
 
     # event handlers
-    def on_right_click(self,event):
+    def update_info(self, x=None, y=None):
+        orient = self.app.contextTabs.imageViewTab.get_view_orient()
+
         image = self.app.contentTabs.imagesTab.get_image_on_focus()
+        labels, pos_phys, units = image.get_pixel_info(x=x, y=y, orient=orient)
 
-        if image is None:
-            logging.info("No image selected, can't handle right click")
-            return
+        text = ''
 
-        x = np.floor(event.x).astype(np.int32)
-        y = np.floor(event.y).astype(np.int32)
+        for label, phys, unit in zip(labels, pos_phys, units):
+            try:
+                text += '{}: {:.2f} {} \n'.format(label, phys, unit)
+            except:
+                text += '{}: {} {} \n'.format(label, phys, unit)
 
-        orient = self.app.contextTabs.imageViewTab.getImageOrent()
-        labels, values = image.get_pixel_info(event.x, event.y, orient)
+        self.info_text_id = self.canvas.create_text(10, 10, fill="white", text='', anchor=tk.N + tk.W)
+        self.canvas.itemconfig(self.info_text_id, text=text)
+        self.canvas.tag_raise(self.info_text_id)
 
-        #todo insert labels and values to context menu
 
     def draw(self):
 
         self.frame = Image.new('RGB', (self.max_dim, self.max_dim))
-        self.frame_f[:,:,:] = 0.0
-        self.frame_i[:,:,:] = 0
 
-        orient = self.app.contextTabs.imageViewTab.getImageOrent()
+        orient = self.app.contextTabs.imageViewTab.get_view_orient()
         cmap = self.app.contextTabs.imageViewTab.getColorMap()
         imagesList = self.app.contentTabs.imagesTab.get_visible()
 
@@ -89,7 +93,7 @@ class ImagePanel():
             if np.amax(frames[-1].shape) > frames_max_dim:
                 frames_max_dim = np.amax(frames[-1].shape)
 
-        global_scale = self.max_dim / frames_max_dim
+        self.global_scale = self.max_dim / frames_max_dim
 
         # alphas = np.array(alphas)
         # alphas = alphas / np.sum(alphas)
@@ -98,7 +102,7 @@ class ImagePanel():
             # frame = frame + frame_ * alpha_
             # all frames are stretched so they fit the final artwork
             # frame_ = frame_ * alpha_
-            frame_ = cv2.resize(frame_,None, fx=global_scale, fy=global_scale, interpolation=cv2.INTER_LINEAR)
+            frame_ = cv2.resize(frame_,None, fx=self.global_scale, fy=self.global_scale, interpolation=cv2.INTER_LINEAR)
             pad_left = int(np.floor((self.max_dim - frame_.shape[1]) / 2))
             pad_right = self.max_dim - frame_.shape[1] - pad_left
             pad_top = int(np.floor((self.max_dim - frame_.shape[0]) / 2))
@@ -112,7 +116,15 @@ class ImagePanel():
         self.frame_tk = ImageTk.PhotoImage(self.frame)
 
         self.canvas.create_image(self.center_x, self.center_y,image = self.frame_tk)
+
+        self.update_info()
+
         self.canvas.pack()
 
+
     def draw_empty(self):
+        """
+        Clear self.canvas
+        :return:
+        """
         self.canvas.delete("all")

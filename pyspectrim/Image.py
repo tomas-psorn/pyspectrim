@@ -1,6 +1,6 @@
 from pyspectrim.File import getH5Id
 
-from ImageViewTab import IND_PHYS
+from pyspectrim.ImageViewTab import IND_PHYS, VIEW_ORIENT
 
 import logging
 
@@ -69,7 +69,6 @@ class Image(object):
 
         self.aspect = self.dim_phys_extent / np.amax(self.dim_phys_extent)
 
-
     def __getitem__(self, key):
         return getattr(self, key)
 
@@ -137,9 +136,38 @@ class Image(object):
 
         return frame
 
-    def get_pixel_info(self, x_canvas, y_canvas, orient):
-        # todo implement
-        return 0.5,1.5,5.5,10.22
+    def get_pixel_info(self, x=None, y=None, orient=None):
+        # x,y, and orient are used when querying info about position on canvas
+
+        label = self.dim_label
+        pos_ind = self.dim_pos
+
+        if x and y:
+            if orient == VIEW_ORIENT.AX.value:
+                pos_ind[0] = x
+                pos_ind[1] = y
+            elif orient == VIEW_ORIENT.TRANS.value:
+                pos_ind[1] = x
+                pos_ind[2] = y
+            elif orient == VIEW_ORIENT.SAG.value:
+                pos_ind[0] = x
+                pos_ind[2] = y
+
+        pos_ind = pos_ind.tolist()
+        pos_phys = []
+        units = []
+        # we might want to change one of the values to string
+
+        for dim in range(0,self.ndim):
+            if "comment" in self.dim_units[dim]:
+                comment_list = self[ self.dim_units[dim]]
+                pos_phys.append(comment_list[self.dim_pos[dim]])
+                units.append('')
+            else:
+                pos_phys.append( self.dim_from_phys[dim] + pos_ind[dim] * self.dim_spacing[dim] )
+                units.append(self.dim_units[dim])
+
+        return label, pos_phys, units
 
 
     # Handling position

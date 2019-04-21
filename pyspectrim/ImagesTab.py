@@ -136,6 +136,9 @@ class ImagesTab(tk.Frame):
 
         self.imagesTree.delete(code)
         self.app.contextTabs.update_context()
+
+
+        self.app.cinema.imagePanel.draw_empty()
         self.app.cinema.imagePanel.draw()
         logging.info("Image {} deleted from the tree".format(code))
 
