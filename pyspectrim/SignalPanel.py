@@ -9,10 +9,10 @@ class SignalPanel():
 
         self.cinema = cinema
         self.app = self.cinema.app
-        self.figure = Figure(figsize=(4, 4), dpi=100)
+        self.figure = Figure(figsize=(6, 4), dpi=100)
         self.canvas = FigureCanvasTkAgg(self.figure, self.cinema)
         self.canvas.get_tk_widget().grid(column=1, row=0)
-        self.canvas._tkcanvas.grid(column=1, row=0)
+        self.canvas._tkcanvas.grid(column=1, row=0, padx=20)
 
         self.canvas.draw()
 
@@ -36,11 +36,20 @@ class SignalPanel():
             if image.dim_label[i] == 'temporal':
                 x, y, x_label, y_label, legend = image.get_signal(dim_order=i)
 
-        self.subplot = self.figure.add_subplot(111)
+        try:
+            self.subplot.cla()
+        except:
+            self.subplot = self.figure.add_subplot(111)
+
         self.subplot.plot(x,y)
         self.subplot.set_xlabel(x_label)
         self.subplot.legend("HHZ 1", loc="upper right")
         self.canvas.draw()
 
     def draw_empty(self):
-        pass
+
+        try:
+            self.subplot.cla()
+            self.canvas.draw()
+        except:
+            pass

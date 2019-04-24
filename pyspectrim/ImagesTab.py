@@ -141,6 +141,9 @@ class ImagesTab(tk.Frame):
 
         self.app.cinema.imagePanel.draw_empty()
         self.app.cinema.imagePanel.draw()
+        self.app.cinema.signalPanel.draw_empty()
+        self.app.cinema.signalPanel.draw()
+
         logging.info("Image {} deleted from the tree".format(code))
 
 

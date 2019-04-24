@@ -122,24 +122,28 @@ class PositionSlider(tk.Scale):
         self.image.decrementPosition(self.dim_order)
         self.update_pos_info()
         self.app.cinema.imagePanel.draw()
+        self.app.cinema.signalPanel.draw()
 
     def rightClick(self, event):
         self.set(self.get()+1)
         self.image.incrementPosition(self.dim_order)
         self.update_pos_info()
         self.app.cinema.imagePanel.draw()
+        self.app.cinema.signalPanel.draw()
 
     def beginClick(self, event):
         self.set(self.cget('from'))
         self.image.posToMin(self.dim_order)
         self.update_pos_info()
         self.app.cinema.imagePanel.draw()
+        self.app.cinema.signalPanel.draw()
 
     def endClick(self, event):
         self.set(self.cget('to'))
         self.image.posToMax(self.dim_order)
         self.update_pos_info()
         self.app.cinema.imagePanel.draw()
+        self.app.cinema.signalPanel.draw()
 
     def playClick(self,event):
         # TODO
