@@ -112,7 +112,7 @@ class FilesTab(tk.Frame):
 
     def addEntry(self, object, parentId):
         if parentId == "":
-            self.filesTree.insert("", "end", getH5Id(object), text=getH5Name(object))
+            self.filesTree.insert("", "end", getH5Id(object), text=getH5Name(object), image=self.app.hdf_icon)
         else:
             self.filesTree.insert(parentId, "end", getH5Id(object), text=getH5Name(object))
 

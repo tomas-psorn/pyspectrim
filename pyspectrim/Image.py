@@ -136,6 +136,26 @@ class Image(object):
 
         return frame
 
+    def get_signal(self, dim_order=None):
+        if not dim_order:
+            logging.debug("No dim_order")
+            return
+
+        index = tuple(self.dim_pos[0:dim_order]) + (slice(0,self.dim_size[dim_order]),) + tuple(self.dim_pos[dim_order+1:])
+
+        y = self.data[index]
+
+        x = np.linspace(self.dim_from_phys[dim_order], self.dim_to_phys[dim_order], self.dim_size[dim_order] )
+
+        y_label = None
+
+        x_label = 't'
+
+        legend = '{} dim:{}'.format(self.tree_id.split('.h5')[1], dim_order)
+
+        return x, y, x_label, y_label, legend
+
+
     def get_pixel_info(self, x=None, y=None, orient=None):
         # x,y, and orient are used when querying info about position on canvas
 

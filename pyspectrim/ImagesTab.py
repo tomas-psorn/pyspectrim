@@ -104,6 +104,7 @@ class ImagesTab(tk.Frame):
 
         # Draw what's to be drawn
         self.app.cinema.imagePanel.draw()
+        self.app.cinema.signalPanel.draw()
 
     # Handlers
     def on_key_enter(self,event):

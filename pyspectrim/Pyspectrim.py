@@ -6,6 +6,8 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import Menu
 
+from PIL import Image, ImageTk
+
 import logging
 
 
@@ -39,7 +41,7 @@ class PySpectrim():
         self.loadIcons()
 
     def setLayout(self):
-        self.cinema.grid(column=0, row=0, sticky=tk.N+tk.S+tk.E+tk.W)
+        self.cinema.grid(column=0, row=0, columnspan=2, sticky=tk.N+tk.S+tk.E+tk.W)
         self.contentTabs.grid(column = 0, row = 1, sticky=tk.N+tk.S+tk.E+tk.W)
         self.contextTabs.grid(column = 1, row = 1, sticky=tk.N+tk.S+tk.E+tk.W)
 
@@ -53,6 +55,8 @@ class PySpectrim():
         self.icons = {}
         self.icons['folder'] = tk.PhotoImage("icons/folder.gif").subsample(10,10)
 
+        hdf_icon = Image.open("icons/hdf5.gif")
+        self.hdf_icon = ImageTk.PhotoImage(hdf_icon)
 
 
 

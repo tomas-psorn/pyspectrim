@@ -39,7 +39,7 @@ class ImagePanel():
 
         # reference to text object indicating position and a value of pixel
 
-        self.canvas.pack()
+        self.canvas.grid(column=0, row=0)
 
 
     # event handlers
@@ -119,7 +119,7 @@ class ImagePanel():
 
         self.update_info()
 
-        self.canvas.pack()
+        self.canvas.grid(column=0, row=0)
 
 
     def draw_empty(self):
