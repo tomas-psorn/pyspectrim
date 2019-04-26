@@ -57,10 +57,10 @@ class PySpectrim():
         self.icons['folder'] = tk.PhotoImage("icons/folder.gif").subsample(10,10)
 
         hdf_icon = Image.open("icons/hdf5.gif")
-        self.hdf_icon = ImageTk.PhotoImage(hdf_icon)
+        self.hdf_icon = ImageTk.PhotoImage(hdf_icon.resize((10, 10)))
 
         bruker_icon = Image.open("icons/bruker.gif")
-        self.bruker_icon = ImageTk.PhotoImage(bruker_icon)
+        self.bruker_icon = ImageTk.PhotoImage(bruker_icon.resize((10, 10)))
 
 
 

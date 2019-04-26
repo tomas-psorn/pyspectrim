@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import numpy.matlib as npml
 
 '''
 HDF5 part
@@ -404,6 +405,142 @@ class Scan(object):
                     print('ERROR: ', fileType, ' file does not contain essential parameter: ', conditionElement)
                     all_here = False
             return all_here
+
+class Reco(object):
+
+    def __init__(self, path, fs = None, read2dseq=True):
+
+        if fs is None:
+            self.fs = FS()
+        else:
+            self.fs = fs
+
+        self.data2dseq = None
+        self.isVisu = None
+        self.isReco = None
+        self.is2dseq = None
+        self.visu_pars = None
+        self.reco = None
+        self.path = Path(path)
+
+        [self.isVisu, self.isReco, self.is2dseq] = self.browseReco(self.fs)
+
+        if self.isVisu:
+            self.visu_pars = ParamGroup(self.path / 'visu_pars')
+
+        if self.isReco:
+            self.reco = ParamGroup(self.path / 'reco')
+
+        if self.is2dseq and self.isVisu and read2dseq:
+            # self.data2dseq = readers.readBruker2dseq(self, self.path + '2dseq', self.fs)
+            self.basic2seqRead()
+            self.pvtools_reshape()
+
+    def browseReco(self,fs):
+        """
+        Function to verify presence of visu_pars, reco, 2dseq files
+        :return:
+        """
+        content = fs.listdir(self.path)
+
+        return 'visu_pars' in content, 'reco' in content, '2dseq' in content
+
+    def methodBasedReshape(self):
+        if self.visu_pars:
+            pass
+
+    def basic2seqRead(self):
+        # Geather information about data format
+        if self.visu_pars.VisuCoreWordType == '_32BIT_SGN_INT':
+            format = np.dtype('int32')
+        elif self.visu_pars.VisuCoreWordType == '_16BIT_SGN_INT':
+            format = np.dtype('int16')
+        elif self.visu_pars.VisuCoreWordType == '_32BIT_FLOAT':
+            format = np.dtype('float32')
+        elif self.visu_pars.VisuCoreWordType == '_8BIT_USGN_INT':
+            format = np.dtype('uint8')
+        else:
+            print('Data format not specified correctly!')
+
+        if self.visu_pars.VisuCoreByteOrder == 'littleEndian':
+            format = format.newbyteorder('L')
+        elif self.visu_pars.VisuCoreWordType == 'bigEndian':
+            format = format.newbyteorder('B')
+        else:
+            print('Byte order not specified correctly!')
+
+        # Read data
+        with self.fs.open(self.path / '2dseq',"rb") as twodseqFile:
+            self.data2dseq = np.fromfile(twodseqFile, dtype=format, count=-1)
+
+    def pvtools_reshape(self):
+
+        VisuCoreWordType = self.visu_pars.VisuCoreWordType
+        VisuCoreByteOrder = self.visu_pars.VisuCoreByteOrder
+        VisuCoreSize = self.visu_pars.VisuCoreSize.astype(np.int32)
+        VisuCoreFrameType = self.visu_pars.VisuCoreFrameType
+        VisuCoreDim = self.visu_pars.VisuCoreDim
+        VisuCoreDimDesc = self.visu_pars.VisuCoreDimDesc
+        NF = self.visu_pars.VisuCoreFrameCount
+        VisuCoreDataSlope = self.visu_pars.VisuCoreDataSlope
+        VisuCoreDataOffs = self.visu_pars.VisuCoreDataOffs
+
+        VisuFGOrderDesc = None
+        VisuFGOrderDescDim = None
+        dim5_n = None
+
+        try:
+            # some reco types do not contain these parameters
+            VisuFGOrderDesc = self.visu_pars.VisuFGOrderDesc
+            VisuFGOrderDescDim = self.visu_pars.VisuFGOrderDescDim
+        except:
+            pass
+
+        if VisuFGOrderDesc and VisuFGOrderDescDim:
+            dim5_n = np.zeros(VisuFGOrderDescDim, dtype='i4')
+            for i in range (0,VisuFGOrderDescDim):
+                dim5_n[i] = VisuFGOrderDesc[i][0]
+
+        if VisuCoreWordType == '_32BIT_SGN_INT':
+            format = np.dtype('int32')
+        elif VisuCoreWordType == '_16BIT_SGN_INT':
+            format = np.dtype('int16')
+        elif VisuCoreWordType == '_32BIT_FLOAT':
+            format = np.dtype('float32')
+        elif VisuCoreWordType == '_8BIT_USGN_INT':
+            format = np.dtype('uint8')
+        else:
+            print('Data format not specified correctly!')
+
+        if VisuCoreByteOrder == 'littleEndian':
+            format = format.newbyteorder('L')
+        elif VisuCoreWordType == 'bigEndian':
+            format = format.newbyteorder('B')
+        else:
+            print('Byte order not specified correctly!')
+
+        blockSize = VisuCoreSize[0];
+        numDataHighDim = np.prod(VisuCoreSize[1:])
+
+        self.data2dseq = np.reshape(self.data2dseq, (blockSize,-1), order='F')
+
+        slope = npml.repmat(VisuCoreDataSlope, 1, np.prod(VisuCoreSize))
+        slope = np.reshape(slope, self.data2dseq.shape, order='F')
+        offset = npml.repmat(VisuCoreDataOffs, 1, np.prod(VisuCoreSize))
+        offset = np.reshape(offset, self.data2dseq.shape, order='F')
+
+        self.data2dseq = self.data2dseq.astype('f4')
+        self.data2dseq = self.data2dseq * slope.astype('f4')
+        self.data2dseq = self.data2dseq + offset.astype('f4')
+
+        if dim5_n is not None:
+            self.data2dseq = np.reshape(self.data2dseq, np.append(VisuCoreSize, dim5_n), order='F')
+            self.data2dseq = np.transpose(self.data2dseq, (1, 0) + tuple(range(2,len(dim5_n)+2)))
+        else:
+            self.data2dseq = np.reshape(self.data2dseq, np.append(VisuCoreSize, NF), order='F')
+            self.data2dseq = np.transpose(self.data2dseq, (1, 0, 2, 3))
+
+
 
 class ParamGroup(object):
 

@@ -1,4 +1,4 @@
-from pyspectrim.File import FileHdf5, getH5Id, getH5Name, FileBruker, Scan
+from pyspectrim.File import FileHdf5, getH5Id, getH5Name, FileBruker, Scan, Reco
 
 import tkinter as tk
 from tkinter import ttk
@@ -165,7 +165,26 @@ class FilesTab(tk.Frame):
             # add k-space to experiment
             self.filesTree.insert(folder, "end", '{}.kspace'.format(folder), text='kspace')
 
-            recos = listdir(folder / 'pdata')
+            reco_folders = listdir(folder / 'pdata')
+
+            for reco_folder in reco_folders:
+                reco = Reco(path=folder / 'pdata' / reco_folder, read2dseq=False)
+
+                if reco.visu_pars['VisuSeriesTypeId'] == 'DERIVED_ISA':
+                    for i in range(0,reco.visu_pars['VisuFGOrderDescDim']):
+                        if reco.visu_pars['VisuFGOrderDesc'][i][1] == 'FG_ISA':
+                            for proc_ind in range(reco.visu_pars['VisuFGOrderDesc'][i][0]):
+                                reco_tree_id = '{}.reco_{}.proc_{}'.format(folder / 'pdata' / reco_folder, reco_folder,proc_ind)
+                                reco_tree_name = 'reco_{}_{}'.format(reco_folder,reco.visu_pars['VisuFGElemComment'][proc_ind])
+                                self.filesTree.insert(folder, "end", reco_tree_id, text=reco_tree_name)
+
+                else:
+                    reco_tree_id = '{}.reco_{}'.format(folder / 'pdata' / reco_folder, reco_folder)
+                    reco_tree_name = 'reco_{}'.format(reco_folder)
+                    self.filesTree.insert(folder, "end", reco_tree_id, text=reco_tree_name)
+
+
+
 
 
 
