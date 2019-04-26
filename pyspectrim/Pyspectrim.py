@@ -33,6 +33,7 @@ class PySpectrim():
         self.file_menu = Menu(self.main_menu, tearoff=0)
 
         self.file_menu.add_command(label="Mount H5 file",command=self.contentTabs.filesTab.mount_h5_dir)
+        self.file_menu.add_command(label="Mount Bruker file", command=self.contentTabs.filesTab.mount_bruker_dir)
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exit", command=self._quit)
 
@@ -57,6 +58,11 @@ class PySpectrim():
 
         hdf_icon = Image.open("icons/hdf5.gif")
         self.hdf_icon = ImageTk.PhotoImage(hdf_icon)
+
+        bruker_icon = Image.open("icons/bruker.gif")
+        self.bruker_icon = ImageTk.PhotoImage(bruker_icon)
+
+
 
 
 

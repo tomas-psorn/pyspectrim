@@ -10,7 +10,7 @@ class ImageViewTab(tk.Frame):
         self.contextTabs = contextTabs
 
         super().__init__(self.contextTabs)
-        self.contextTabs.add(self, text="Image view")
+        self.contextTabs.add(self, text="Image")
 
         self.alphaSlider = AlphaSlider(self)
         self.indPhysSwitch = IndPhysSwitch(self)

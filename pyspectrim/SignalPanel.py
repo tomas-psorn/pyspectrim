@@ -43,7 +43,7 @@ class SignalPanel():
 
         self.subplot.plot(x,y)
         self.subplot.set_xlabel(x_label)
-        self.subplot.legend("HHZ 1", loc="upper right")
+        self.subplot.legend((legend,), loc="upper right")
         self.canvas.draw()
 
     def draw_empty(self):

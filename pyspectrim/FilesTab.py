@@ -1,10 +1,12 @@
-from pyspectrim.File import File, getH5Id, getH5Name
+from pyspectrim.File import FileHdf5, getH5Id, getH5Name, FileBruker, Scan
 
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
 
 import logging
+
+from os import listdir
 
 class FilesTab(tk.Frame):
 
@@ -35,10 +37,12 @@ class FilesTab(tk.Frame):
         # init context menu
         self.filesTree.popup_on_file = tk.Menu(self.filesTree, tearoff=0)
         self.filesTree.popup_on_file.add_command(label="Mount H5 file", command=self.mount_h5_dir)
+        self.filesTree.popup_on_file.add_command(label="Mount Bruker file", command=self.mount_bruker_dir)
         self.filesTree.popup_on_file.add_command(label="Close", command=self.close_file)
 
         self.filesTree.popup_on_blank = tk.Menu(self.filesTree, tearoff=0)
         self.filesTree.popup_on_blank.add_command(label="Mount H5 file", command=self.mount_h5_dir)
+        self.filesTree.popup_on_blank.add_command(label="Mount Bruker file", command=self.mount_bruker_dir)
 
         self.filesTree.pack()
 
@@ -110,7 +114,7 @@ class FilesTab(tk.Frame):
             else:
                 return None
 
-    def addEntry(self, object, parentId):
+    def add_tree_entry_hdf5(self, object, parentId):
         if parentId == "":
             self.filesTree.insert("", "end", getH5Id(object), text=getH5Name(object), image=self.app.hdf_icon)
         else:
@@ -118,7 +122,7 @@ class FilesTab(tk.Frame):
 
         if object.__class__.__name__ != 'Dataset':
             for key in object.keys():
-                self.addEntry(object[key], getH5Id(object))
+                self.add_tree_entry_hdf5(object[key], getH5Id(object))
 
     def mount_h5_dir(self):
         path = filedialog.askopenfilename(initialdir = "/",title = "Select file",filetypes = (("h5 files","*.h5"),))
@@ -126,13 +130,13 @@ class FilesTab(tk.Frame):
         logging.info("Mounting: {}".format(path))
 
         try:
-            self.filesList.append(File(self.app, path))
+            self.filesList.append(FileHdf5(self.app, path))
         except:
             logging.info("File not mounted: {}".format(path))
             return
 
         try:
-            self.addEntry(self.filesList[-1],"")
+            self.add_tree_entry_hdf5(self.filesList[-1],"")
         except:
             logging.debug("File cannot be added into files list: {}".format(path))
             self.filesList = self.filesList[0:-1]
@@ -141,6 +145,29 @@ class FilesTab(tk.Frame):
         logging.info("Mounted: {}".format(path))
 
         self.app.contentTabs.select(self.contentTabs.filesTab)
+
+    def mount_bruker_dir(self):
+        path = filedialog.askdirectory(initialdir="/", title="Select directory")
+
+        file = FileBruker(app=self.app, path=path)
+
+        self.add_tree_entry_bruker(file=file)
+
+    def add_tree_entry_bruker(self, file=None):
+        self.filesTree.insert("", "end", file.path.name, text=file.path.name, image=self.app.bruker_icon)
+
+        for folder in file.folders:
+            scan = Scan(path=folder, readFid=False)
+
+            # add experiment level entry
+            self.filesTree.insert(file.path.name, "end", folder, text='\{}_{}'.format(folder.name,scan.acqp['PULPROG'].replace('.ppg','')))
+
+            # add k-space to experiment
+            self.filesTree.insert(folder, "end", '{}.kspace'.format(folder), text='kspace')
+
+            recos = listdir(folder / 'pdata')
+
+
 
 
 
