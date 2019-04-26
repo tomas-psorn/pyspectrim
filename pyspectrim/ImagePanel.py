@@ -84,11 +84,11 @@ class ImagePanel():
             alphas.append(image.visibility)
 
             if orient == 0:
-                frames.append(image.getFrame(orient=0, max_dim = self.max_dim))
+                frames.append(image.get_frame(orient=0, max_dim = self.max_dim))
             elif orient == 1:
-                frames.append(image.getFrame(orient=1, max_dim = self.max_dim))
+                frames.append(image.get_frame(orient=1, max_dim = self.max_dim))
             elif orient == 2:
-                frames.append(image.getFrame(orient=2, max_dim = self.max_dim))
+                frames.append(image.get_frame(orient=2, max_dim = self.max_dim))
 
             if np.amax(frames[-1].shape) > frames_max_dim:
                 frames_max_dim = np.amax(frames[-1].shape)

@@ -24,6 +24,13 @@ class SignalPanel():
         :param dim_order:
         :return:
         """
+
+        x = None
+        y = None
+        x_label = None
+        y_label = None
+        legend = None
+
         imagesList = self.app.contentTabs.imagesTab.get_visible()
 
         if not imagesList:
@@ -35,6 +42,9 @@ class SignalPanel():
         for i in range(0,image.ndim):
             if image.dim_label[i] == 'temporal':
                 x, y, x_label, y_label, legend = image.get_signal(dim_order=i)
+
+        if not x or not y:
+            return
 
         try:
             self.subplot.cla()

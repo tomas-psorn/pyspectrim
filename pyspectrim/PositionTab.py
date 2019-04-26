@@ -118,9 +118,9 @@ class PositionSlider(tk.Scale):
         self.app.cinema.imagePanel.draw()
 
     def leftClick(self, event):
-        self.set(self.get()-1)
-        self.image.decrementPosition(self.dim_order)
-        self.update_pos_info()
+        self.set(self.get()-1) # update slider value
+        self.image.decrementPosition(self.dim_order) # update image
+        self.update_pos_info() # update text information next to slider
         self.app.cinema.imagePanel.draw()
         self.app.cinema.signalPanel.draw()
 

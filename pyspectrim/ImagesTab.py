@@ -1,4 +1,4 @@
-from pyspectrim.File import getH5Id
+from pyspectrim.File import getH5Id, Reco, Scan
 from pyspectrim.Image import Image
 
 import tkinter as tk
@@ -77,27 +77,43 @@ class ImagesTab(tk.Frame):
         self.imagesTree.focus(image.tree_id)
         self.app.contextTabs.update_context()
 
-    def insertImage(self, image_code, dataset):
+    def insert_image(self, file=None, image_code=None):
 
-        if dataset.__class__.__name__ == 'Dataset':
-            self.dataset = dataset
+        if file.__class__.__name__ == 'FileBruker':
+            reco_code = image_code.split('.')[-1]
+            reco_path = image_code[0:-len(reco_code)-1] # this is a robust way to cut the suffix, only the last dot split can be relied on
+
+            if 'reco' in reco_code:
+                image = Image(app=self.app, reco=Reco(path=reco_path), tree_id=image_code)
+            elif 'proc' in reco_code:
+                proc_code = reco_code
+                reco_code = reco_path.split('.')[-1]
+                reco_path = reco_path[0:-len(reco_code)-1]
+                image = Image(app=self.app, reco=Reco(path=reco_path), proc_code=proc_code, tree_id=image_code)
+            else:
+                logging.debug('Problem with Bruker and image_code')
+                return
+
+        elif file.__class__.__name__ == 'FileHdf5':
+            image = Image(app=self.app, dataset=file.get_dataset(code=image_code), tree_id=image_code)
         else:
-            return
+            logging.debug('Unknown file class')
 
-        # Insert new image to images list
-        self.images_list.append(Image(self.app,dataset))
-        self.images_vis_list.append(self.images_list[-1])
+        self.images_list.append(image)
+        self.images_vis_list.append(image)
 
         self.app.contentTabs.select(self)
 
         # Insert new image to images tree & configure
-        objectId = getH5Id(dataset)
-        self.imagesTree.insert('',tk.END, objectId, text=dataset.name)
-        self.imagesTree.set(objectId, 'size',getImageSizeStr(self.images_list[-1]))
-        self.imagesTree.set(objectId, 'dtype',self.dataset.dtype)
-        self.imagesTree.set(objectId, 'visibility',self.images_list[-1].isVisible())
-        self.imagesTree.selection_set(objectId)
-        self.set_image_on_focus(self.images_list[-1])
+        image_id = image.tree_id
+        image_name = image.tree_name
+
+        self.imagesTree.insert('',tk.END, image_id, text=image_name)
+        self.imagesTree.set(image_id, 'size',getImageSizeStr(image))
+        self.imagesTree.set(image_id, 'dtype',image.data.dtype)
+        self.imagesTree.set(image_id, 'visibility',image.isVisible())
+        self.imagesTree.selection_set(image_id)
+        self.set_image_on_focus(image)
 
         # Update context
         self.app.contextTabs.update_context()
@@ -120,9 +136,7 @@ class ImagesTab(tk.Frame):
         self.app.contextTabs.update_context()
 
     def close_image(self):
-
         code = self.imagesTree.selection()[0]
-
 
         for image in self.images_list:
             if image.tree_id == code:
@@ -134,10 +148,8 @@ class ImagesTab(tk.Frame):
 
                 logging.info("Image {} deleted from the list".format(code))
 
-
         self.imagesTree.delete(code)
         self.app.contextTabs.update_context()
-
 
         self.app.cinema.imagePanel.draw_empty()
         self.app.cinema.imagePanel.draw()

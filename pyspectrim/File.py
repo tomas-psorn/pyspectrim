@@ -43,20 +43,35 @@ class FileHdf5(h5py.File):
         except FileNotFoundError:
             pass
 
+        self.file_tree_id = self.filename
+
+    def get_dataset(self, code=None):
+        pathIntra = code.replace(self.filename, '')
+
+        if self.filename in code:
+            if self[pathIntra].__class__.__name__ == 'Dataset':
+                return self.file[pathIntra]
+            else:
+                return None
+        else:
+            return None
+
 
 '''
 Bruker part
 '''
-class FileBruker(h5py.File):
+class FileBruker(object):
     def __init__(self, app=None, path=None):
 
         self.app = app
-        self.path = Path(path)
 
-        self.folders = [self.path / f for f in listdir(self.path) if not isfile(self.path / f) and f.isdigit()]
+        # the path is stored both as a Path object and as a string
+        self.filename = Path(path)
+        self.file_tree_id = str(self.filename)
 
-        for folder in self.folders:
-            print(folder)
+
+        self.scan_paths = [self.filename / f for f in listdir(self.filename) if not isfile(self.filename / f) and f.isdigit()]
+
 
 class Scan(object):
 
@@ -406,6 +421,7 @@ class Scan(object):
                     all_here = False
             return all_here
 
+
 class Reco(object):
 
     def __init__(self, path, fs = None, read2dseq=True):
@@ -539,7 +555,6 @@ class Reco(object):
         else:
             self.data2dseq = np.reshape(self.data2dseq, np.append(VisuCoreSize, NF), order='F')
             self.data2dseq = np.transpose(self.data2dseq, (1, 0, 2, 3))
-
 
 
 class ParamGroup(object):
@@ -736,6 +751,7 @@ class ParamGroup(object):
                 params[key] = self.proc_entry(val.rstrip())
 
         return params
+
 
 class FS(object):
     '''

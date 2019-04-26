@@ -62,9 +62,11 @@ class FilesTab(tk.Frame):
             self.filesTree.selection_remove(self.filesTree.selection())
 
     def on_double_click(self,event):
-        dataset_code = self.filesTree.selection()[0]
-        dataset = self.GetDataset(dataset_code.replace(".h5", ""))
-        self.app.contentTabs.imagesTab.insertImage(dataset_code, dataset)
+        image_code = self.filesTree.selection()[0]
+
+        for file in self.filesList:
+            if file.file_tree_id in image_code:
+                self.app.contentTabs.imagesTab.insert_image(file=file, image_code=image_code)
 
     # poups
     def popup_on_file(self, event):
@@ -83,8 +85,12 @@ class FilesTab(tk.Frame):
     def close_file(self):
         file_code = self.filesTree.focus()
 
+        logging.info("Closing file: {}".format(file_code))
+
         for file in self.filesList:
-            if file_code == file.filename:
+            # first condition is for hdf5 second for bruker, the options are mutualy exclusive
+            if file_code == file.filename or file_code == file.filename._str:
+
                 try:
                     self.filesList.remove(file)
                     logging.debug("Removed file from files list {}".format(file_code))
@@ -99,20 +105,7 @@ class FilesTab(tk.Frame):
                     logging.warning("Failed to remove file from files tree {}".format(file_code))
                     return
 
-
-    # uncategorized functionality
-    def GetDataset(self, code):
-        for _file in self.filesList:
-            pathNoExtension = _file.filename.rsplit('.',1)[0]
-            pathIntra = code.replace(pathNoExtension,'')
-
-            if pathNoExtension in code:
-                if  _file.file[pathIntra].__class__.__name__ == 'Dataset':
-                    return _file.file[pathIntra]
-                else:
-                    return None
-            else:
-                return None
+        logging.info("File closed")
 
     def add_tree_entry_hdf5(self, object, parentId):
         if parentId == "":
@@ -149,39 +142,63 @@ class FilesTab(tk.Frame):
     def mount_bruker_dir(self):
         path = filedialog.askdirectory(initialdir="/", title="Select directory")
 
-        file = FileBruker(app=self.app, path=path)
+        logging.info("Mounting: {}".format(path))
 
-        self.add_tree_entry_bruker(file=file)
+        self.filesList.append(FileBruker(app=self.app, path=path))
+        self.add_tree_entry_bruker(file=self.filesList[-1])
+
+        # try:
+        #     self.filesList.append(FileBruker(app=self.app, path=path))
+        #     logging.info("File mounted")
+        # except:
+        #     logging.info("File not mounted: {}".format(path))
+        #     return
+        #
+        # try:
+        #     self.add_tree_entry_bruker(file=self.filesList[-1])
+        # except:
+        #     logging.debug("File cannot be added into files list: {}".format(path))
+        #     self.filesList = self.filesList[0:-1]
+        #     return
 
     def add_tree_entry_bruker(self, file=None):
-        self.filesTree.insert("", "end", file.path.name, text=file.path.name, image=self.app.bruker_icon)
 
-        for folder in file.folders:
-            scan = Scan(path=folder, readFid=False)
+        file_tree_id = file.filename._str
+        file_tree_name = file.filename.name
+
+        self.filesTree.insert("", "end", file_tree_id, text=file_tree_name, image=self.app.bruker_icon)
+
+        for scan_path in file.scan_paths:
+            scan = Scan(path=scan_path, readFid=False)
+
+            scan_tree_id = scan.path._str
+            scan_tree_name = '\{}_{}'.format(scan.path.name,scan.acqp['PULPROG'].replace('.ppg',''))  # it is to be similar to HDF5 entry
 
             # add experiment level entry
-            self.filesTree.insert(file.path.name, "end", folder, text='\{}_{}'.format(folder.name,scan.acqp['PULPROG'].replace('.ppg','')))
+            self.filesTree.insert(file_tree_id, "end", scan_tree_id, text=scan_tree_name)
 
             # add k-space to experiment
-            self.filesTree.insert(folder, "end", '{}.kspace'.format(folder), text='kspace')
+            self.filesTree.insert(scan_tree_id, "end", '{}.kspace'.format(scan_tree_id), text='kspace')
 
-            reco_folders = listdir(folder / 'pdata')
+            reco_paths = listdir(scan_path / 'pdata')
 
-            for reco_folder in reco_folders:
-                reco = Reco(path=folder / 'pdata' / reco_folder, read2dseq=False)
+            for reco_path in reco_paths:
+                reco = Reco(path=scan_path / 'pdata' / reco_path, read2dseq=False)
+
+                reco_tree_id = reco.path._str
 
                 if reco.visu_pars['VisuSeriesTypeId'] == 'DERIVED_ISA':
                     for i in range(0,reco.visu_pars['VisuFGOrderDescDim']):
                         if reco.visu_pars['VisuFGOrderDesc'][i][1] == 'FG_ISA':
                             for proc_ind in range(reco.visu_pars['VisuFGOrderDesc'][i][0]):
-                                reco_tree_id = '{}.reco_{}.proc_{}'.format(folder / 'pdata' / reco_folder, reco_folder,proc_ind)
-                                reco_tree_name = 'reco_{}_{}'.format(reco_folder,reco.visu_pars['VisuFGElemComment'][proc_ind])
-                                self.filesTree.insert(folder, "end", reco_tree_id, text=reco_tree_name)
+                                reco_tree_id_ = '{}.reco_{}.proc_{}'.format(reco_tree_id, reco.path.name,proc_ind)
+                                reco_tree_name = 'reco_{}_{}'.format(reco.path.name,reco.visu_pars['VisuFGElemComment'][proc_ind])
+                                self.filesTree.insert(scan_tree_id, "end", reco_tree_id_, text=reco_tree_name)
 
                 else:
-                    reco_tree_id = '{}.reco_{}'.format(folder / 'pdata' / reco_folder, reco_folder)
-                    reco_tree_name = 'reco_{}'.format(reco_folder)
-                    self.filesTree.insert(folder, "end", reco_tree_id, text=reco_tree_name)
+                    reco_tree_id_ = '{}.reco_{}'.format(reco_tree_id, reco.path.name)
+                    reco_tree_name = 'reco_{}'.format(reco.path.name)
+                    self.filesTree.insert(scan_tree_id, "end", reco_tree_id_, text=reco_tree_name)
 
 
 

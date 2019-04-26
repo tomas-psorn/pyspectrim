@@ -14,45 +14,18 @@ import h5py
 import matplotlib.pyplot as plt
 
 class Image(object):
-    def __init__(self, app, dataset):
+    def __init__(self, app=None, **kwargs):
 
         self.app = app
+        self.tree_id = kwargs['tree_id']
+        self.tree_name = self.app.contentTabs.filesTab.filesTree.item(self.tree_id)['text']
 
-        self.tree_id = getH5Id(dataset)
-        self.data = np.array(dataset)
-
-        self.dim_size = np.array(dataset.attrs['dim_size'])
-        self.ndim = dataset.attrs['ndim']
-
-        self.dim_label = ['x','y','z']
-        self.dim_from_phys = np.array(dataset.attrs['slice_pos'][0, :])
-
-        for i in range(0,self.ndim-3):
-            self.dim_label.append(dataset.attrs['dim_desc'][i+3].decode('UTF-8'))
-            self.dim_from_phys = np.append(self.dim_from_phys, 0.0)
-
-        self.dim_phys_extent = np.array(dataset.attrs['dim_extent'])
-        self.dim_to_phys = self.dim_from_phys + self.dim_phys_extent
-
-        self.dim_from = np.zeros(shape=(self.ndim,),dtype=np.int32)
-        self.dim_to = self.dim_size
-
-        # todo include slice spacing
-        self.dim_spacing = self.dim_phys_extent / self.dim_size
-
-        # there must be better way to do this
-        self.dim_units = dataset.attrs['dim_units'].tolist()
-        for i in range(0,len(self.dim_units)):
-            self.dim_units[i] = self.dim_units[i].decode()
-
-
-        for key in dataset.attrs:
-            if "comment" in key:
-                comment = dataset.attrs[key].tolist()
-                for i in range(0,len(comment)):
-                    comment[i] = comment[i].decode()
-
-                setattr(self, key, comment)
+        if 'dataset' in kwargs:
+            self.init_from_dataset(kwargs)
+        elif 'reco' in kwargs:
+            self.init_from_reco(kwargs)
+        elif 'scan' in kwargs:
+            self.init_from_scan(kwargs)
 
         # set initial browsing position, spatial dimenstions to the middle, all other to zero
         self.dim_pos = (self.dim_size / 2).astype(np.int32)
@@ -69,10 +42,219 @@ class Image(object):
 
         self.aspect = self.dim_phys_extent / np.amax(self.dim_phys_extent)
 
+
+    def init_from_dataset(self, kwargs):
+
+        dataset = kwargs['dataset']
+        self.data = np.array(dataset)
+
+        self.dim_size = np.array(dataset.attrs['dim_size'])
+        self.ndim = dataset.attrs['ndim']
+
+        self.dim_label = ['x', 'y', 'z']
+        self.dim_from_phys = np.array(dataset.attrs['slice_pos'][0, :])
+
+        for i in range(0, self.ndim - 3):
+            self.dim_label.append(dataset.attrs['dim_desc'][i + 3].decode('UTF-8'))
+            self.dim_from_phys = np.append(self.dim_from_phys, 0.0)
+
+        self.dim_phys_extent = np.array(dataset.attrs['dim_extent'])
+        self.dim_to_phys = self.dim_from_phys + self.dim_phys_extent
+
+        self.dim_from = np.zeros(shape=(self.ndim,), dtype=np.int32)
+        self.dim_to = self.dim_size
+
+        # todo include slice spacing
+        self.dim_spacing = self.dim_phys_extent / self.dim_size
+
+        # there must be better way to do this
+        self.dim_units = dataset.attrs['dim_units'].tolist()
+        for i in range(0, len(self.dim_units)):
+            self.dim_units[i] = self.dim_units[i].decode()
+
+        for key in dataset.attrs:
+            if "comment" in key:
+                comment = dataset.attrs[key].tolist()
+                for i in range(0, len(comment)):
+                    comment[i] = comment[i].decode()
+
+                setattr(self, key, comment)
+
+    def init_from_reco(self, kwargs):
+
+        reco = kwargs['reco'] # reco object just in local scope
+        pars = reco.visu_pars.getDict()
+
+        self.data = reco.data2dseq
+
+        VisuFGOrderDescDim = None
+        VisuFGOrderDesc = None
+
+        try:
+            VisuFGOrderDescDim = pars['VisuFGOrderDescDim']
+            VisuFGOrderDesc = pars['VisuFGOrderDesc']
+        except:
+            pass
+
+        # these are all possible parameters
+        self.ndim = 0  # total number of dimensions
+        self.data_units = None  # unit of data values in string
+        self.dim_size = np.empty(shape=(0, 0), dtype=np.int32)  # size of each dimension
+        self.dim_phys_extent = np.empty(shape=(0, 0), dtype=np.float32)  # physical extent of each dimension
+        self.dim_units = []  # string of each dimension's unit
+        self.dim_desc = []  # category of each dimension {spatial, spectroscopical, temporal, categorical}
+        self.dim_label = []  # label of each dimension
+        self.slice_orient = None
+        self.slice_pos = None
+
+        # spectroscopic datasets do not have spatial dimensions
+        try:
+            self.slice_orient = pars['VisuCoreOrientation']
+            self.slice_pos = pars['VisuCorePosition']
+        except:
+            pass
+
+        # only certain datasets have units
+        try:
+            # todo is it necessary to do the replace?
+            self.data_units = pars['VisuCoreDataUnits'].replace('<', '').replace('>', '')
+        except:
+            self.data_units = 'a. u.'
+
+        # number of dimensions
+        self.ndim = int(pars["VisuCoreDim"])
+
+        # iterate trough visu core
+        for i in range(0, self.ndim):
+            self.dim_size = np.append(self.dim_size, int(pars["VisuCoreSize"][i]))
+            self.dim_phys_extent = np.append(self.dim_phys_extent, float(pars["VisuCoreExtent"][i]))
+            self.dim_units.append(pars["VisuCoreUnits"][i])
+            self.dim_desc.append(pars["VisuCoreDimDesc"][i])
+
+            # here i presume, that visu core can only have 3 dimensions and only be spatial or spectral
+            if self.dim_desc[i] == 'spatial':
+                if i == 0:
+                    self.dim_label.append('x')
+                elif i == 1:
+                    self.dim_label.append('y')
+                elif i == 2:
+                    self.dim_label.append('z')
+            elif self.dim_desc == 'spectroscopic':
+                if i == 0:
+                    self.dim_label.append('spectrum')
+                elif i == 1:
+                    self.dim_label.append('spectrum_2')
+                elif i == 2:
+                    self.dim_label.append('spectrum_2')
+            else:
+                raise KeyError('Bad thing happened')
+
+        # todo solve this
+        tmp = self.dim_size[0]
+        self.dim_size[0] = self.dim_size[1]
+        self.dim_size[1] = tmp
+
+        # iterate trough frame groups
+        if VisuFGOrderDescDim:
+            for i in range(0, pars["VisuFGOrderDescDim"]):
+
+                if pars["VisuFGOrderDesc"][i][1] == "FG_SLICE":
+                    self.dim_size = np.append(self.dim_size, int(pars["VisuFGOrderDesc"][i][0]))
+                    self.dim_phys_extent = np.append(self.dim_phys_extent,
+                                                    pars["VisuCoreFrameThickness"] * pars["VisuFGOrderDesc"][i][0])
+                    self.dim_units.append('mm')
+                    self.dim_desc.append('spatial')
+                    self.dim_label.append('z')
+
+                elif pars["VisuFGOrderDesc"][i][1] == "FG_MOVIE":
+                    self.dim_size = np.append(self.dim_size, int(pars["VisuFGOrderDesc"][i][0]))
+                    self.dim_phys_extent = np.append(self.dim_phys_extent,
+                                                    pars["VisuAcqRepetitionTime"] * pars["VisuFGOrderDesc"][i][0])
+                    self.dim_units.append('diff_comment')
+                    self.diff_comment = np.string_(pars["VisuFGElemComment"])
+                    self.dim_desc.append('categorical')
+                    self.dim_label.append('diffusion')
+
+                elif pars["VisuFGOrderDesc"][i][1] == "FG_CYCLE":
+                    self.dim_size = np.append(self.dim_size, int(pars["VisuFGOrderDesc"][i][0]))
+                    self.dim_phys_extent = np.append(self.dim_phys_extent,
+                                                    pars["VisuAcqRepetitionTime"] * pars["VisuFGOrderDesc"][i][0])
+                    self.dim_units.append('ms')
+                    self.dim_desc.append('temporal')
+                    self.dim_label.append('time series')
+
+                elif pars["VisuFGOrderDesc"][i][1] == "FG_COIL":
+                    self.dim_size = np.append(self.dim_size, int(pars["VisuFGOrderDesc"][i][0]))
+                    self.dim_phys_extent = np.append(self.dim_phys_extent, float(pars["VisuFGOrderDesc"][i][0]))
+                    self.dim_units.append('coil_comment')
+                    self.coil_comment = np.empty(shape=(0, 0), dtype=np.string_)
+                    for i in range(0, int(pars["VisuFGOrderDesc"][i][0])):
+                        self.coil_comment = np.append(self.coil_comment, np.string_('coil {}'.format(i + 1)))
+                    self.dim_desc.append('categorical')
+                    self.dim_label.append('coils')
+                elif pars['VisuFGOrderDesc'][i][1]== 'FG_ISA':
+                    maps_dim_order = i + self.ndim
+                    # these entries are later forgotten
+                    self.dim_size = np.append(self.dim_size, int(pars["VisuFGOrderDesc"][i][0]))
+                    self.dim_phys_extent = np.append(self.dim_phys_extent, float(pars["VisuFGOrderDesc"][i][0]))
+                    self.dim_units.append('')
+                    self.dim_desc.append('categorical')
+                    self.dim_label.append('maps')
+
+                else:
+                    raise KeyError('Unknown FG identifier')
+
+                self.ndim += 1
+
+        else:
+            pass
+
+        # for parametric maps calculated in postprocessing
+        if 'proc_code' in kwargs:
+            if maps_dim_order is None:
+                logging.debug('maps_dim_order not defined')
+                raise ValueError
+            proc_dim_order = int(kwargs['proc_code'].replace('proc_',''))
+
+            index = ()
+
+            for i in range(0, self.ndim):
+                if i == maps_dim_order:
+                    index = index + (proc_dim_order,)
+                else:
+                    index = index + (slice(0,self.dim_size[i]),)
+
+            self.data = self.data[index] # exctract given map
+
+            # modify parameters
+            self.ndim -=1
+            self.dim_size = np.delete(self.dim_size, maps_dim_order)
+            self.dim_phys_extent = np.delete(self.dim_phys_extent, maps_dim_order)
+            del self.dim_units[maps_dim_order]
+            del self.dim_desc[maps_dim_order]
+            del self.dim_label[maps_dim_order]
+
+            # calculate rest of parameters
+            self.dim_from_phys = self.slice_pos[0, :]
+
+            for i in range(0, self.ndim - 3):
+                self.dim_from_phys = np.append(self.dim_from_phys, 0.0)
+
+            self.dim_to_phys = self.dim_from_phys + self.dim_phys_extent
+
+            self.dim_from = np.zeros(shape=(self.ndim,), dtype=np.int32)
+            self.dim_to = self.dim_size
+
+            # todo include slice spacing
+            self.dim_spacing = self.dim_phys_extent / self.dim_size
+
+
+
+    def init_from_scan(self, kwargs):
+        pass
+
     def __getitem__(self, key):
         return getattr(self, key)
-
-
 
     # properties
     @property
@@ -105,7 +287,7 @@ class Image(object):
             self._visibility = value
 
     # getters
-    def getFrame(self, **kwargs):
+    def get_frame(self, **kwargs):
 
         ind_phys_switch = IND_PHYS(self.app.contextTabs.imageViewTab.indPhysSwitch.get()).name
 
@@ -123,6 +305,8 @@ class Image(object):
             else:
                 print("Unknown orientation")
                 return None
+
+
             frame = self.data[location]
 
         # todo change to apply_enhancement
