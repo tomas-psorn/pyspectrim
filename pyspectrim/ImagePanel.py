@@ -1,6 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 
+from pyspectrim.Geometry import Plane2D
+from pyspectrim.enums import *
+
 from PIL import Image, ImageTk
 
 import cv2
@@ -25,22 +28,115 @@ class ImagePanel():
         # used to fit the biggest dimension of any frame to max dim
         self.global_scale = 1.0
 
+        self.init_geometry()
 
-
-        #
         self.frame = None
 
-        self.center_x = int(self.max_dim/2)
-        self.center_y = int(self.max_dim/2)
-
+        # canvas is currently supposed to be square
         self.canvas = tk.Canvas(self.cinema, bg='black')
         self.canvas.config(width=self.max_dim, height=self.max_dim)
 
+        self.popup_menu = tk.Menu(self.canvas, tearoff=0)
+        self.popup_menu.add_command(label="Reset", command=self.reset_view)
+
+        self.canvas.bind("<Button-3>", self.popup_context_menu)
+        self.canvas.bind("<MouseWheel>", self.on_scroll)
+        self.canvas.bind("<Button-1>", self.set_drag_start)
+        self.canvas.bind("<B1-Motion>", self.on_drag)
 
         # reference to text object indicating position and a value of pixel
-
         self.canvas.grid(column=0, row=0)
 
+    def popup_context_menu(self, event):
+        try:
+            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.popup_menu.grab_release()
+
+    def reset_view(self):
+        self.update_geometry()
+        self.draw()
+
+    def on_scroll(self, event):
+        zoom_ = 1.0 + 5/event.delta
+        self.zoom(zoom=zoom_)
+
+    def zoom(self, zoom=None):
+        self.extent_from_phys *= zoom
+        self.extent_to_phys *= zoom
+
+        self.x_axis *= zoom
+        self.y_axis *= zoom
+        self.z_axis *= zoom
+
+        self.draw()
+
+    def set_drag_start(self,event):
+        self.drag_start_x = event.x
+        self.drag_start_y = event.y
+
+    def on_drag(self, event):
+        diff_x = (self.drag_start_y - event.y) / self.max_dim
+        diff_y = (self.drag_start_x - event.x) / self.max_dim
+
+        orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
+
+        if orient == VIEW_ORIENT.TRANS.value:
+            self.pane(x=diff_x, y=diff_y, z=0.0)
+        elif orient == VIEW_ORIENT.SAG.value:
+            self.pane(x=0.0, y=diff_x, z=diff_y)
+        elif orient == VIEW_ORIENT.TRANS.value:
+            self.pane(x=diff_x, y=0.0, z=diff_y)
+
+    def pane(self,x=None, y=None, z=None):
+        self.extent_from_phys[0] += x
+        self.extent_from_phys[1] += y
+        self.extent_from_phys[2] += z
+
+        self.extent_to_phys[0] += x
+        self.extent_to_phys[1] += y
+        self.extent_to_phys[2] += z
+
+        self.x_axis += x
+        self.y_axis += y
+        self.z_axis += z
+
+        self.draw()
+
+
+    def init_geometry(self):
+        self.center_x = int(self.max_dim/2)
+        self.center_y = int(self.max_dim/2)
+
+        self.extent_from_phys = np.empty(3, dtype=np.float32)
+        self.extent_to_phys = np.empty(3, dtype=np.float32)
+
+        self.x_axis = None
+        self.y_axis = None
+        self.z_axis = None
+
+        self.plane_xy = None
+        self.plane_yz = None
+        self.plane_xz = None
+
+    def update_geometry(self):
+        image = self.app.contentTabs.imagesTab.get_visible()[0]
+
+        self.extent_from_phys[0] = image.dim_from_phys[0]
+        self.extent_from_phys[1] = image.dim_from_phys[1]
+        self.extent_from_phys[2] = image.dim_from_phys[2]
+
+        self.extent_to_phys[0] = image.dim_to_phys[0]
+        self.extent_to_phys[1] = image.dim_to_phys[1]
+        self.extent_to_phys[2] = image.dim_to_phys[2]
+
+        self.x_axis = np.linspace(self.extent_from_phys[0], self.extent_to_phys[0], self.max_dim)
+        self.y_axis = np.linspace(self.extent_from_phys[1], self.extent_to_phys[1], self.max_dim)
+        self.z_axis = np.linspace(self.extent_from_phys[2], self.extent_to_phys[2], self.max_dim)
+
+        self.plane_xy = Plane2D(x_axis=self.x_axis, y_axis=self.y_axis)
+        self.plane_yz = Plane2D(x_axis=self.y_axis, y_axis=self.z_axis)
+        self.plane_xz = Plane2D(x_axis=self.x_axis, y_axis=self.z_axis)
 
     # event handlers
     def update_info(self, x=None, y=None):
@@ -61,11 +157,36 @@ class ImagePanel():
         self.canvas.itemconfig(self.info_text_id, text=text)
         self.canvas.tag_raise(self.info_text_id)
 
+    def get_frame(self, image=None, orient=None):
+        """
+        If anny external entity, histogram for instance, wishes to access the same frame, as displayed.
+        :param image:
+        :return:
+        """
+        ind_phys_switch = IND_PHYS(self.app.contextTabs.imageViewTab.indPhysSwitch.get()).name
+        if orient is None:
+            orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
+
+        if ind_phys_switch == IND_PHYS.IND.name:
+            if orient == VIEW_ORIENT.TRANS.value:
+                return image.get_frame(orient=VIEW_ORIENT.TRANS.value, max_dim=self.max_dim)
+            elif orient == VIEW_ORIENT.SAG.value:
+                return image.get_frame(orient=VIEW_ORIENT.SAG.value, max_dim=self.max_dim)
+            elif orient == VIEW_ORIENT.CORR.value:
+                return image.get_frame(orient=VIEW_ORIENT.CORR.value, max_dim=self.max_dim)
+        elif ind_phys_switch == IND_PHYS.PHYS.name:
+            if orient == VIEW_ORIENT.TRANS.value:
+                return image.get_frame(orient=VIEW_ORIENT.TRANS.value, x_axis=self.x_axis, y_axis=self.y_axis)
+            elif orient == VIEW_ORIENT.SAG.value:
+                return image.get_frame(orient=VIEW_ORIENT.SAG.value, x_axis=self.y_axis, y_axis=self.z_axis)
+            elif orient == VIEW_ORIENT.CORR.value:
+                return image.get_frame(orient=VIEW_ORIENT.CORR.value, x_axis=self.x_axis, y_axis=self.z_axis)
+
 
     def draw(self):
-
         self.frame = Image.new('RGB', (self.max_dim, self.max_dim))
 
+        ind_phys_switch = IND_PHYS(self.app.contextTabs.imageViewTab.indPhysSwitch.get()).name
         orient = self.app.contextTabs.imageViewTab.get_view_orient()
         cmap = self.app.contextTabs.imageViewTab.getColorMap()
         imagesList = self.app.contentTabs.imagesTab.get_visible()
@@ -83,12 +204,21 @@ class ImagePanel():
         for image in imagesList:
             alphas.append(image.visibility)
 
-            if orient == 0:
-                frames.append(image.get_frame(orient=0, max_dim = self.max_dim))
-            elif orient == 1:
-                frames.append(image.get_frame(orient=1, max_dim = self.max_dim))
-            elif orient == 2:
-                frames.append(image.get_frame(orient=2, max_dim = self.max_dim))
+            if ind_phys_switch == IND_PHYS.IND.name:
+                if orient == VIEW_ORIENT.TRANS.value:
+                    frames.append(image.get_frame(orient=VIEW_ORIENT.TRANS.value, max_dim = self.max_dim))
+                elif orient == VIEW_ORIENT.SAG.value:
+                    frames.append(image.get_frame(orient=VIEW_ORIENT.SAG.value, max_dim = self.max_dim))
+                elif orient == VIEW_ORIENT.CORR.value:
+                    frames.append(image.get_frame(orient=VIEW_ORIENT.CORR.value, max_dim = self.max_dim))
+            elif ind_phys_switch == IND_PHYS.PHYS.name:
+                if orient == VIEW_ORIENT.TRANS.value:
+                    frames.append(image.get_frame(orient=VIEW_ORIENT.TRANS.value, x_axis = self.x_axis, y_axis=self.y_axis))
+                elif orient == VIEW_ORIENT.SAG.value:
+                    frames.append(image.get_frame(orient=VIEW_ORIENT.SAG.value, x_axis = self.y_axis, y_axis=self.z_axis))
+                elif orient == VIEW_ORIENT.CORR.value:
+                    frames.append(image.get_frame(orient=VIEW_ORIENT.CORR.value, x_axis = self.x_axis, y_axis=self.z_axis))
+
 
             if np.amax(frames[-1].shape) > frames_max_dim:
                 frames_max_dim = np.amax(frames[-1].shape)

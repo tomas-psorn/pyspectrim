@@ -3,6 +3,13 @@ from tkinter import ttk
 
 from enum import Enum
 
+import matplotlib, sys
+matplotlib.use('TkAgg')
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+
+from pyspectrim.enums import *
 
 class ImageViewTab(tk.Frame):
     def __init__(self, contextTabs):
@@ -12,6 +19,7 @@ class ImageViewTab(tk.Frame):
         super().__init__(self.contextTabs)
         self.contextTabs.add(self, text="Image")
 
+        self.complex_part_switch = ComplexPartSwitch(self)
         self.alphaSlider = AlphaSlider(self)
         self.indPhysSwitch = IndPhysSwitch(self)
         self.view_orient_switch = ViewOrientSwitch(self)
@@ -23,15 +31,20 @@ class ImageViewTab(tk.Frame):
     def on_visible(self, event=None):
         self.update()
 
-
-
     def update(self):
         image = self.app.contentTabs.imagesTab.get_image_on_focus()
-        if image:
-            self.alphaSlider.set_image(image)
-            self.colorMapOptions.set_image(image)
-            self.contrastEnhance.set_image(image)
+        if image is None:
+            self.set_defaults()
+            return
 
+        self.alphaSlider.set_image(image)
+        self.colorMapOptions.set_image(image)
+        self.contrastEnhance.set_image(image)
+
+    def set_defaults(self):
+        self.alphaSlider.set_image(None)
+        self.colorMapOptions.set_image(None)
+        self.contrastEnhance.set_image(None)
 
     # setters, getters
     def setIndPhys(self,value):
@@ -47,7 +60,6 @@ class ImageViewTab(tk.Frame):
         self.indPhysSwitch.lock(value)
 
     # maintenance
-
     def clean(self):
         self.alphaSlider.value.set(1.0)
         self.indPhysSwitch.lock(False)
@@ -110,7 +122,6 @@ class AlphaSlider(tk.Scale):
         if self.image:
             self.image.visibility = value
 
-
 class IndPhysSwitch():
     def __init__(self, tab):
 
@@ -134,9 +145,9 @@ class IndPhysSwitch():
         self.layout.pack(fill=tk.X)
 
     def set(self, value):
-        # todo
-        #  if switched to indexed redraw
         self.value.set(value)
+        self.app.cinema.imagePanel.draw()
+
 
     def get(self):
         return self.value.get()
@@ -159,9 +170,6 @@ class IndPhysSwitch():
             self.indSwitch['state'] = 'normal'
             self.physSwitch['state'] = 'normal'
 
-class IND_PHYS(Enum):
-    IND, PHYS = range(2)
-
 class ViewOrientSwitch():
     # scope - each image panel has its own
     def __init__(self, tab):
@@ -170,28 +178,28 @@ class ViewOrientSwitch():
         self.app = tab.app
         self.value = tk.IntVar()
 
-        self.layout = tk.LabelFrame(self.tab, text="ImageOrientation")
+        self.layout = tk.LabelFrame(self.tab, text="View Orientation")
 
         self.axial = tk.Radiobutton(self.layout,
-                                    text='coronal',
+                                    text='transversal',
                                     variable=self.value,
                                     value=0,
-                                    command= lambda : self.set(VIEW_ORIENT.AX.value))
+                                    command= lambda : self.set(VIEW_ORIENT.TRANS.value))
 
         self.transversal = tk.Radiobutton(self.layout,
-                                          text='sagital',
+                                          text='sagittal',
                                           variable=self.value,
                                           value=1,
-                                          command=lambda : self.set(VIEW_ORIENT.TRANS.value))
+                                          command=lambda : self.set(VIEW_ORIENT.SAG.value))
 
         self.sagital = tk.Radiobutton(self.layout,
-                                      text='axial',
+                                      text='corronal',
                                       variable=self.value,
                                       value=2,
-                                      command=lambda : self.set(VIEW_ORIENT.SAG.value))
+                                      command=lambda : self.set(VIEW_ORIENT.CORR.value))
 
         # default orientation is axial
-        self.value.set(VIEW_ORIENT.AX.value)
+        self.value.set(VIEW_ORIENT.TRANS.value)
 
         self.axial.grid(column=0, row =0)
         self.transversal.grid(column=1, row =0)
@@ -200,14 +208,11 @@ class ViewOrientSwitch():
         self.layout.pack(fill=tk.X)
 
     def set(self, value):
-        # todo
-        #  if switched to indexed redraw
         self.value.set(value)
-
         self.app.cinema.imagePanel.draw()
 
-class VIEW_ORIENT(Enum):
-    AX, TRANS, SAG = range(3)
+    def get(self):
+        return self.value.get()
 
 class ColorMapOption(tk.OptionMenu):
     def __init__(self, tab):
@@ -239,7 +244,6 @@ class ColorMapOption(tk.OptionMenu):
         self.image.colormap = value
         self.app.cinema.imagePanel.draw()
 
-
 class ContrastEnhance():
     def __init__(self, tab):
 
@@ -264,6 +268,7 @@ class ContrastEnhance():
         self.max_entry = tk.Entry(self.layout, textvariable=self.max_var)
         self.apply_button = tk.Button(self.layout, text="Apply to data", command=self.apply_enhance)
         self.hist_norm_button = tk.Button(self.layout, text="Normalize histogram", command=self.hist_norm)
+        self.enhance_button = tk.Button(self.layout, text="Enhance", command=self.enhance_window_popup)
 
         self.stretch_button = tk.Radiobutton(self.layout,
                                     text='stretch',
@@ -303,6 +308,10 @@ class ContrastEnhance():
 
         self.apply_button.grid(row=2,column=0, columnspan=2)
         self.hist_norm_button.grid(row=2,column=2, columnspan=2)
+        self.enhance_button.grid(row=3,column=0, columnspan=2)
+
+    def enhance_window_popup(self):
+        enhance_window = EnhanceWindow(app=self.app, image=self.image)
 
     def on_switch_click(self):
         self.app.cinema.imagePanel.draw()
@@ -356,5 +365,105 @@ class ContrastEnhance():
 
         self.app.contextTabs.update_context()
         self.app.cinema.imagePanel.draw()
+
+class EnhanceWindow():
+    def __init__(self, app=None, image=None):
+        self.app = app
+        self.image = image
+        self.enhance_window = tk.Tk()
+        self.enhance_window.wm_title("Enhance")
+        self.enhance_window.geometry('400x600')
+
+        self.hist_frame = tk.Frame(self.enhance_window)
+        self.options_frame = tk.Frame(self.enhance_window)
+
+        self.hist_fig = Figure(figsize=(5, 4), dpi=100)
+
+        ax = self.hist_fig.add_subplot(111)
+        n, bins, patches = ax.hist(image.data.flatten(), 250, density=False, label='data')
+        n, bins, patches = ax.hist(self.app.cinema.imagePanel.get_frame(image=image).flatten(), 50, density=False, label='frame')
+        # ax.legend(loc='upper right')
+
+        self.pow_frame = tk.LabelFrame(self.options_frame, text='Power')
+        self.pow_coef_val = tk.StringVar()
+        self.pow_coef_val.set('1.0')
+        self.pow_coef_entry = tk.Entry(self.pow_frame, textvariable=self.pow_coef_val)
+        self.apply_button = tk.Button(self.pow_frame, text="Apply to preview", command=self.set_enhance)
+        self.pow_coef_entry.grid(row=0, column=0)
+        self.apply_button.grid(row=0, column=1)
+        self.pow_frame.pack()
+
+        self.log_frame = tk.LabelFrame(self.options_frame, text='Logarithm')
+
+        self.canvas = FigureCanvasTkAgg(self.hist_fig, master=self.hist_frame)
+        self.canvas.get_tk_widget().pack()
+        self.canvas.draw()
+
+        self.hist_frame.pack()
+        self.options_frame.pack()
+
+        self.done_button = tk.Button(self.enhance_window, text="Okay", command=self.enhance_window.destroy)
+        self.done_button.pack()
+
+    def set_enhance(self):
+        if float(self.pow_coef_entry.get()) != 1.0:
+            self.image.set_enhance(pow=float(self.pow_coef_entry.get()))
+
+        self.app.cinema.imagePanel.draw()
+        self.app.cinema.imagePanel.update_info()
+
+
+class ComplexPartSwitch():
+    def __init__(self, tab):
+        self.tab = tab
+        self.app = tab.app
+        self.value = tk.IntVar()
+
+        self.layout = tk.LabelFrame(self.tab, text="Complex part")
+
+        self.abs = tk.Radiobutton(self.layout,
+                                    text='magnitude',
+                                    variable=self.value,
+                                    value=COMPLEX_PART.ABS.value,
+                                    command=lambda: self.set(COMPLEX_PART.ABS.value))
+
+        self.phase = tk.Radiobutton(self.layout,
+                                          text='phase',
+                                          variable=self.value,
+                                          value=COMPLEX_PART.PHASE.value,
+                                          command=lambda: self.set(COMPLEX_PART.PHASE.value))
+
+        self.real = tk.Radiobutton(self.layout,
+                                      text='real',
+                                      variable=self.value,
+                                      value=COMPLEX_PART.RE.value,
+                                      command=lambda: self.set(COMPLEX_PART.RE.value))
+
+        self.imag = tk.Radiobutton(self.layout,
+                                      text='imag',
+                                      variable=self.value,
+                                      value=COMPLEX_PART.IM.value,
+                                      command=lambda: self.set(COMPLEX_PART.IM.value))
+
+        # default orientation is axial
+        self.value.set(COMPLEX_PART.ABS.value)
+
+        self.abs.grid(column=0, row=0)
+        self.phase.grid(column=1, row=0)
+        self.real.grid(column=2, row=0)
+        self.imag.grid(column=3, row=0)
+
+        self.layout.pack(fill=tk.X)
+
+    def set(self, value):
+        # todo
+        #  if switched to indexed redraw
+        self.value.set(value)
+
+        self.app.cinema.imagePanel.draw()
+        self.app.cinema.signalPanel.draw()
+
+    def get(self):
+        return self.value.get()
 
 

@@ -226,19 +226,19 @@ class Scan(object):
         else:
             return self.fid_basic_reshape(fidData, dimBlock, dimZ, dimR, dimAcq0, dimAcqHigh, dimCh, dimA)
 
-    def fid_basic_read(self, format, startRead=0, dimRead=-1):
+    def fid_basic_read(self, file, format, startRead=0, dimRead=-1):
 
-        self.seek(startRead)  # find the start position in the file
+        file.seek(startRead)  # find the start position in the file
 
-        fidData = np.fromfile(self, dtype=format, count=dimRead)  # read
+        fidData = np.fromfile(file, dtype=format, count=dimRead)  # read
 
         if dimRead == -1:
             return fidData
         else:
-            endRead = self.tell()
+            endRead = file.tell()
             return fidData, endRead
 
-    def job_basic_reshape(dataIn):
+    def job_basic_reshape(self, dataIn):
         """
         TODO implement
         :param dataIn:
@@ -251,7 +251,7 @@ class Scan(object):
         if len(fidData) != dimBlock * dimAcqHigh * dimZ * dimR * dimA:
             print('Missmatch')
 
-        fidData = np.reshape(fidData, (dimBlock, dimAcqHigh * dimZ * dimR));
+        fidData = np.reshape(fidData, (dimBlock, dimAcqHigh * dimZ * dimR), order='F');
 
         if dimBlock != dimAcq0 * dimCh:
             fidData = np.transpose(fidData, (1, 0))
@@ -551,10 +551,10 @@ class Reco(object):
 
         if dim5_n is not None:
             self.data2dseq = np.reshape(self.data2dseq, np.append(VisuCoreSize, dim5_n), order='F')
-            self.data2dseq = np.transpose(self.data2dseq, (1, 0) + tuple(range(2,len(dim5_n)+2)))
+            # self.data2dseq = np.transpose(self.data2dseq, (1, 0) + tuple(range(2,len(dim5_n)+2)))
         else:
             self.data2dseq = np.reshape(self.data2dseq, np.append(VisuCoreSize, NF), order='F')
-            self.data2dseq = np.transpose(self.data2dseq, (1, 0, 2, 3))
+            # self.data2dseq = np.transpose(self.data2dseq, (1, 0, 2, 3))
 
 
 class ParamGroup(object):

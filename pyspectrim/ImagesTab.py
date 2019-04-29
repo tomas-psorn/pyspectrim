@@ -90,6 +90,8 @@ class ImagesTab(tk.Frame):
                 reco_code = reco_path.split('.')[-1]
                 reco_path = reco_path[0:-len(reco_code)-1]
                 image = Image(app=self.app, reco=Reco(path=reco_path), proc_code=proc_code, tree_id=image_code)
+            elif 'kspace' in reco_code:
+                image = Image(app=self.app, scan=Scan(path=reco_path), tree_id=image_code)
             else:
                 logging.debug('Problem with Bruker and image_code')
                 return
@@ -119,6 +121,7 @@ class ImagesTab(tk.Frame):
         self.app.contextTabs.update_context()
 
         # Draw what's to be drawn
+        self.app.cinema.imagePanel.update_geometry()
         self.app.cinema.imagePanel.draw()
         self.app.cinema.signalPanel.draw()
 
@@ -151,13 +154,13 @@ class ImagesTab(tk.Frame):
         self.imagesTree.delete(code)
         self.app.contextTabs.update_context()
 
+        self.app.cinema.imagePanel.update_geometry()
         self.app.cinema.imagePanel.draw_empty()
         self.app.cinema.imagePanel.draw()
         self.app.cinema.signalPanel.draw_empty()
         self.app.cinema.signalPanel.draw()
 
         logging.info("Image {} deleted from the tree".format(code))
-
 
     def popupContextMenu(self, event):
         try:
@@ -169,8 +172,6 @@ class ImagesTab(tk.Frame):
             self.imagesTree.popup_menu.tk_popup(event.x_root, event.y_root, 0)
         finally:
             self.imagesTree.popup_menu.grab_release()
-
-
 
     # Context menu handle functions
 

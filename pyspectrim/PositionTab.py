@@ -49,7 +49,7 @@ class PositionSlider(tk.Scale):
 
         self.layout = tk.LabelFrame(self.tab, text=self.image.dim_label[self.dim_order])
         # super(Slider,self).__init__(self.layout, orient=tk.HORIZONTAL, length = 284, from_=0, to=250)
-        super().__init__(self.layout, variable=self.value ,orient=tk.HORIZONTAL, length = 250, from_= self.image.dim_from[self.dim_order], to=self.image.dim_to[self.dim_order])
+        super().__init__(self.layout, variable=self.value ,orient=tk.HORIZONTAL, length = 250, from_= self.image.dim_from_ind[self.dim_order], to=self.image.dim_to_ind[self.dim_order])
 
         # set initial position
         self.set(self.image.dim_pos[self.dim_order])
