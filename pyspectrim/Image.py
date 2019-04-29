@@ -38,9 +38,8 @@ class Image(object):
         self.dim_from_ind = np.zeros((self.ndim,))
         self.dim_to_ind = self.dim_from_ind + self.dim_size
 
-        self.dim_spacing = self.dim_phys_extent / self.dim_size
-
         self._visibility = 1.0
+        self.alpha_mask = None
         self._colormap = cv2.COLORMAP_BONE
 
         self.min_data = np.amin(self.data)
@@ -89,6 +88,8 @@ class Image(object):
                     comment[i] = comment[i].decode()
 
                 setattr(self, key, comment)
+
+        self.dim_spacing = self.dim_phys_extent / self.dim_size
 
     def init_from_reco(self, kwargs):
 
@@ -235,7 +236,6 @@ class Image(object):
                     self.dim_units.append('')
                     self.dim_desc.append('categorical')
                     self.dim_label.append('maps')
-
                 else:
                     raise KeyError('Unknown FG identifier')
 
@@ -269,21 +269,25 @@ class Image(object):
             del self.dim_desc[maps_dim_order]
             del self.dim_label[maps_dim_order]
 
+        self.dim_spacing = self.dim_phys_extent / self.dim_size
+
     def init_from_scan(self, kwargs):
         scan = kwargs['scan']  # reco object just in local scope
         method = scan.method.getDict()
         acqp = scan.acqp.getDict()
 
         # basic reshape
-        format, bits, dimBlock, dimZ, dimR, dimAcq0, dimAcqHigh, dimCh, dimA = scan.fidBasicInfo()
-        self.data = np.reshape(scan.fid, [scan.fid.shape[0], scan.fid.shape[1], dimAcqHigh, dimZ, dimR],order='F')
+        # format, bits, dimBlock, dimZ, dimR, dimAcq0, dimAcqHigh, dimCh, dimA = scan.fidBasicInfo()
+        # self.data = np.reshape(scan.fid, [scan.fid.shape[0], scan.fid.shape[1], dimAcqHigh, dimZ, dimR],order='F')
 
         # put the coil dimension to last position
-        dims = np.array(range(len(self.data.shape)))
-        tmp = dims[0]
-        dims[0:-1] = dims[1:]
-        dims[-1] = tmp
-        self.data = np.transpose(self.data,tuple(dims))
+        # dims = np.array(range(len(self.data.shape)))
+        # tmp = dims[0]
+        # dims[0:-1] = dims[1:]
+        # dims[-1] = tmp
+        # self.data = np.transpose(self.data,tuple(dims))
+
+        self.data = scan.fid
 
         self.ndim = 0
         self.data_units = 'a. u.'
@@ -291,6 +295,7 @@ class Image(object):
         self.dim_phys_extent = np.empty(shape=(0,),dtype=np.float32)
         self.dim_from_phys = np.empty(shape=(0,),dtype=np.float32)
         self.dim_to_phys = np.empty(shape=(0,), dtype=np.float32)
+        self.dim_spacing = np.empty(shape=(0,), dtype=np.float32)
 
         self.dim_units = []
         self.dim_desc = []
@@ -302,59 +307,72 @@ class Image(object):
 
         for i in range(acqp['ACQ_dim']):
             self.ndim += 1
-            self.dim_size = np.append(self.dim_size, int(acqp['ACQ_size'][i]))
+            self.dim_size = np.append(self.dim_size, int(method['PVM_EncMatrix'][i]))
+            self.dim_spacing = np.append(self.dim_spacing, 1/acqp['ACQ_fov'][i])
             self.dim_phys_extent = np.append(self.dim_phys_extent, np.pi)
-            self.dim_from_phys = np.append(self.dim_from_phys, -0.5 * np.pi)
+            self.dim_from_phys = np.append(self.dim_from_phys, -1.0 * self.dim_spacing[i] * self.dim_size[i] / 2)
+            self.dim_to_phys = np.append(self.dim_to_phys, self.dim_spacing[i] * ((self.dim_size[i] / 2) - 1))
             self.dim_units.append('rad/m')
             self.dim_desc.append('kspace')
 
             if i == 0:
                 self.dim_label.append('kx')
-                self.dim_size[i] /= 2
-                self.dim_to_phys = np.append(self.dim_to_phys, self.dim_from_phys[i] + self.dim_phys_extent[i])
                 self.x_axis = np.linspace(self.dim_from_phys[i], self.dim_to_phys[i], self.dim_size[i])
             elif i == 1:
                 self.dim_label.append('ky')
-                self.dim_to_phys = np.append(self.dim_to_phys, self.dim_from_phys[i] + self.dim_phys_extent[i])
                 self.y_axis = np.linspace(self.dim_from_phys[i], self.dim_to_phys[i], self.dim_size[i])
             elif i == 2:
                 self.dim_label.append('kz')
-                self.dim_to_phys = np.append(self.dim_to_phys, self.dim_from_phys[i] + self.dim_phys_extent[i])
                 self.y_axis = np.linspace(self.dim_from_phys[i], self.dim_to_phys[i], self.dim_size[i])
 
 
         for i in range(self.ndim, len(self.data.shape)):
             # slice, 3D acquisitions are covered in previous loop
-            if i == 2 and self.data.shape[i] > 1:
+            if i == 2:
                 self.ndim += 1
                 self.dim_size = np.append(self.dim_size, self.data.shape[i])
                 self.slice_pos = acqp['ACQ_slice_offset']
                 self.dim_phys_extent = np.append(self.dim_phys_extent, np.subtract(self.slice_pos[0],self.slice_pos[-1]))
                 self.dim_from_phys = np.append(self.dim_from_phys, self.slice_pos[0])
                 self.dim_to_phys = np.append(self.dim_to_phys, self.dim_from_phys[-1] + self.dim_phys_extent[-1])
+                self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[-1]/self.dim_size[-1])
                 self.dim_units.append('mm')
                 self.dim_desc.append('spatial')
                 self.dim_label.append('z')
-            # repetition
+            # echo
             elif i == 3 and self.data.shape[i] > 1:
+                self.ndim += 1
+                self.dim_size = np.append(self.dim_size, self.data.shape[i])
+                self.dim_to_phys = np.append(self.dim_to_phys, method['EffectiveTE'][-1])
+                self.dim_from_phys = np.append(self.dim_from_phys, method['EffectiveTE'][0])
+                self.dim_phys_extent = np.append(self.dim_phys_extent,
+                                                 self.dim_from_phys - self.dim_to_phys)
+                self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[-1] / self.dim_size[-1])
+                self.dim_units.append('ms')
+                self.dim_desc.append('temporal')
+                self.dim_label.append('TE')
+            # repetition
+            elif i == 4 and self.data.shape[i] > 1:
                 self.ndim += 1
                 self.dim_size = np.append(self.dim_size, self.data.shape[i])
                 self.dim_phys_extent = np.append(self.dim_phys_extent, acqp['NR'] * acqp['ACQ_repetition_time'] / 1000.0)
                 self.dim_to_phys = np.append(self.dim_to_phys, self.dim_from_phys[-1] + self.dim_phys_extent[-1])
+                self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[-1] / self.dim_size[-1])
                 self.dim_from_phys = np.append(self.dim_from_phys, 0.0)
                 self.dim_units.append('s')
                 self.dim_desc.append('temporal')
                 self.dim_label.append('t')
             # coil
-            elif i == 4 and self.data.shape[i] > 1:
+            elif i == 5 and self.data.shape[i] > 1:
                 self.ndim += 1
                 self.dim_size = np.append(self.dim_size, self.data.shape[i])
-                self.dim_phys_extent = np.append(self.dim_phys_extent, float(dimCh))
+                self.dim_phys_extent = np.append(self.dim_phys_extent, float(method['PVM_EncAvailReceivers']))
                 self.dim_from_phys = np.append(self.dim_from_phys, 0.0)
                 self.dim_to_phys = np.append(self.dim_to_phys, self.dim_from_phys[-1] + self.dim_phys_extent[-1])
+                self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[-1] / self.dim_size[-1])
                 self.dim_units.append('coil_comment')
                 self.coil_comment = []
-                for i in range(dimCh):
+                for i in range(method['PVM_EncAvailReceivers']):
                     self.coil_comment.append('coil {}'.format(i))
                 self.dim_desc.append('categorical')
                 self.dim_label.append('coil')
@@ -404,30 +422,36 @@ class Image(object):
         location_high = tuple(self.dim_pos[3:])
         # coronal
         if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
-            location = ( slice( 0, self.dim_size[0] ), slice( 0, self.dim_size[1] ), self.dim_pos[2] ) + location_high
+            location_low = ( slice( 0, self.dim_size[0] ), slice( 0, self.dim_size[1] ), self.dim_pos[2] )
             x_axis_im = self.x_axis
             y_axis_im = self.y_axis
         # sagital
         elif kwargs['orient'] == VIEW_ORIENT.SAG.value:
-            location = (self.dim_pos[0], slice(0, self.dim_size[1]), slice(0, self.dim_size[2])) + location_high
+            location_low = (self.dim_pos[0], slice(0, self.dim_size[1]), slice(0, self.dim_size[2]))
             x_axis_im = self.y_axis
             y_axis_im = self.z_axis
         # axial
         elif kwargs['orient'] == VIEW_ORIENT.CORR.value:
-            location = (slice(0, self.dim_size[0]), self.dim_pos[1], slice(0, self.dim_size[2])) + location_high
+            location_low = (slice(0, self.dim_size[0]), self.dim_pos[1], slice(0, self.dim_size[2]))
             x_axis_im = self.x_axis
             y_axis_im = self.z_axis
 
-        frame = self.data[location]
+        frame = self.data[location_low+ location_high]
 
         if complex_part_switch == COMPLEX_PART.ABS.value:
             frame = np.abs(frame)
         elif complex_part_switch == COMPLEX_PART.PHASE.value:
-            frame = np.phase(frame)
+            frame = np.angle(frame)
         elif complex_part_switch == COMPLEX_PART.RE.value:
             frame = np.real(frame)
         else:
             frame = np.imag(frame)
+
+        if self.alpha_mask is not None:
+            alpha = self.alpha_mask[location_low]
+            # frame = self.apply_visibility(frame=frame, alpha=alpha)
+            a = interpolate.interp2d(y_axis_im, x_axis_im, alpha, kind='linear', fill_value=0.0)
+            alpha = a(kwargs['x_axis'], kwargs['y_axis'])
 
         if ind_phys_switch == IND_PHYS.PHYS.value:
             if not 'x_axis' in kwargs or not 'y_axis' in kwargs:
@@ -436,6 +460,9 @@ class Image(object):
 
             f = interpolate.interp2d(y_axis_im, x_axis_im, frame, kind='linear', fill_value=0.0)
             frame = f(kwargs['x_axis'], kwargs['y_axis'])
+            f = interpolate.interp2d(y_axis_im, x_axis_im, frame, kind='linear', fill_value=0.0)
+            frame = f(kwargs['x_axis'], kwargs['y_axis'])
+
 
         # IMROT90
         if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
@@ -452,6 +479,10 @@ class Image(object):
         # todo this has to be done on cinema level
         # frame = self.resize(frame, export_size)
         frame = self.applyColormap(frame)
+
+        if self.alpha_mask is not None:
+            b, g, r = cv2.split(frame)
+            frame =  cv2.merge((b, r, g, alpha))
 
         return frame
 
@@ -547,6 +578,10 @@ class Image(object):
     def applyColormap(self,frame):
         return cv2.applyColorMap(frame, self.colormap)
 
+    def apply_visibility(self,frame=None, alpha=None):
+        # b, g, r = cv2.split(frame)
+        return cv2.merge((frame, frame, frame, alpha))
+
     def resize(self,frame, export_size):
         return cv2.resize(frame, export_size, interpolation=cv2.INTER_LINEAR)
 
@@ -612,9 +647,18 @@ class Image(object):
                 self.min_preview = self.min_data
                 self.max_preview = self.max_data
 
+                self.alpha_mask = None
+
+
     def reset_enhance(self):
         self.point_trans = POINT_TRANS.LIN.value
         self.point_trans_coef = 1.0
 
         self.min_preview = self.min_data
         self.max_preview = self.max_data
+
+    def encode_visibility(self, image_to_enc=None):
+        alpha = image_to_enc.data
+        range = np.amax(alpha) - np.amin(alpha)
+        alpha = (alpha - np.amin(alpha)) / range
+        self.alpha_mask = 1.0 - alpha

@@ -247,24 +247,40 @@ class Scan(object):
         return dataIn
 
     def fid_basic_reshape(self, fidData, dimBlock, dimZ, dimR, dimAcq0, dimAcqHigh, dimCh, dimA):
+        enc_matrix = self.method.PVM_EncMatrix.astype(np.int32)
 
-        if len(fidData) != dimBlock * dimAcqHigh * dimZ * dimR * dimA:
-            print('Missmatch')
+        slices = np.sum(self.method.PVM_SPackArrNSlices.astype(np.int32))
+        echoes = int(self.method.PVM_NEchoImages)
+        repetitions = int(self.method.PVM_NRepetitions)
+        channels = int(self.method.PVM_EncAvailReceivers)
 
-        fidData = np.reshape(fidData, (dimBlock, dimAcqHigh * dimZ * dimR), order='F');
-
-        if dimBlock != dimAcq0 * dimCh:
-            fidData = np.transpose(fidData, (1, 0))
-            fidData = fidData[:, :(dimAcq0 * dimCh)]
-            fidData = np.reshape(fidData, (dimAcqHigh * dimZ * dimR * dimA, dimAcq0, dimCh), order='F')
-            fidData = np.transpose(fidData, (2, 1, 0))
+        fidData = fidData[0::2] + 1j * fidData[1::2]
+        fidData = np.reshape(fidData, (enc_matrix[0], -1), order='C')
+        if len(enc_matrix) == 2:
+            fidData = np.reshape(fidData, [enc_matrix[0], enc_matrix[1], slices, echoes, repetitions, channels],
+                                 order='F')
         else:
-            fidData = np.reshape(fidData, (dimAcq0, dimCh, dimAcqHigh * dimZ * dimR * dimA), order='F')
-            fidData = np.transpose(fidData, (1, 0, 2))
+            fidData = np.reshape(fidData, [enc_matrix[0], enc_matrix[1], slices, echoes, repetitions, channels],
+                                 order='F')
 
-        fidDataOut = fidData[:, 0::2, :] + 1j * fidData[:, 1::2, :]
 
-        return fidDataOut
+        # if len(fidData) != dimBlock * dimAcqHigh * dimZ * dimR * dimA:
+        #     print('Missmatch')
+        #
+        # fidData = np.reshape(fidData, (dimBlock, dimAcqHigh * dimZ * dimR), order='F');
+        #
+        # if dimBlock != dimAcq0 * dimCh:
+        #     fidData = np.transpose(fidData, (1, 0))
+        #     fidData = fidData[:, :(dimAcq0 * dimCh)]
+        #     fidData = np.reshape(fidData, (dimAcqHigh * dimZ * dimR * dimA, dimAcq0, dimCh), order='F')
+        #     fidData = np.transpose(fidData, (2, 1, 0))
+        # else:
+        #     fidData = np.reshape(fidData, (dimAcq0, dimCh, dimAcqHigh * dimZ * dimR * dimA), order='F')
+        #     fidData = np.transpose(fidData, (1, 0, 2))
+        #
+        # fidDataOut = fidData[:, 0::2, :] + 1j * fidData[:, 1::2, :]
+
+        return fidData
 
     def methodBasedReshape(self):
         """

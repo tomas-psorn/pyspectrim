@@ -51,6 +51,7 @@ class ImagesTab(tk.Frame):
         self.imagesTree.bind("<Key>", self.on_key_enter)
 
         self.imagesTree.popup_menu = tk.Menu(self.imagesTree, tearoff=0)
+        self.imagesTree.popup_menu.add_command(label="Encode visibility", command=self.encode_alpha)
         self.imagesTree.popup_menu.add_command(label="Reload", command=self.reload_image_data)
         self.imagesTree.popup_menu.add_separator()
         self.imagesTree.popup_menu.add_command(label="Set visible", command= lambda: self.set_im_vis(1.0))
@@ -60,6 +61,10 @@ class ImagesTab(tk.Frame):
         self.imagesTree.bind("<Button-3>", self.popupContextMenu)
 
         self.imagesTree.pack()
+
+    def encode_alpha(self):
+        image = self.get_image_on_focus()
+        encode_window = EncodeWindow(app=self.app, image=image)
 
     # getters
     def get_visible(self):
@@ -210,3 +215,48 @@ class ImagesTab(tk.Frame):
         image.reload_data()
         self.app.contextTabs.update_context()
         self.app.cinema.imagePanel.draw()
+
+class EncodeWindow():
+    def __init__(self, app=None, image=None):
+        self.app = app
+        self.image = image
+
+        self.encode_window = tk.Tk()
+        self.encode_window.wm_title("Encode visibility")
+        self.encode_window.geometry('400x400')
+
+        self.treeview_frame = tk.Frame(self.encode_window)
+        self.treeview = ttk.Treeview(self.treeview_frame)
+        self.treeview.config(columns=('image'))
+
+        self.treeview.column('#0')
+
+
+        self.treeview.heading('#0', text='Image')
+        self.populate()
+
+        self.treeview.bind("<Button-1>", self.on_click)
+
+        self.treeview.pack()
+        self.treeview_frame.pack()
+
+        self.done_button = tk.Button(self.encode_window, text="Okay", command=self.encode_window.destroy)
+        self.done_button.pack()
+
+    def on_click(self,event):
+        image_to_enc = self.get_image_on_focus()
+        self.image.encode_visibility(image_to_enc=image_to_enc)
+        self.app.cinema.imagePanel.draw()
+        self.encode_window.destroy()
+
+    def get_image_on_focus(self):
+        for image in self.app.contentTabs.imagesTab.images_list:
+            if image.tree_id == self.treeview.focus():
+                return image
+            elif image.tree_id == self.treeview.selection()[0] and len(self.treeview.selection()[0]) == 1:
+                return image
+
+    def populate(self):
+        for image in self.app.contentTabs.imagesTab.images_list:
+            if image.tree_id != self.image.tree_id and (image.dim_size[0:2] == self.image.dim_size[0:2]).all():
+                self.treeview.insert('','end',image.tree_id,text=image.tree_name)
