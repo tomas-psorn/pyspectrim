@@ -1,5 +1,7 @@
 import h5py
 
+import matplotlib.pyplot as plt
+
 from os.path import basename, isfile
 from os import listdir, walk
 
@@ -247,22 +249,108 @@ class Scan(object):
         return dataIn
 
     def fid_basic_reshape(self, fidData, dimBlock, dimZ, dimR, dimAcq0, dimAcqHigh, dimCh, dimA):
+        # Get parameters
         enc_matrix = self.method.PVM_EncMatrix.astype(np.int32)
+        echo_images = int(self.method.PVM_NEchoImages)
+        total_accel = self.method.PVM_EncTotalAccel
+        phase_factor = int(self.acqp.ACQ_phase_factor)
+        try:
+            echoes = int(self.acqp.NECHOES)
+        except:
+            echoes = None
 
-        slices = np.sum(self.method.PVM_SPackArrNSlices.astype(np.int32))
-        echoes = int(self.method.PVM_NEchoImages)
-        repetitions = int(self.method.PVM_NRepetitions)
+        try:
+            repetitions = int(self.method.PVM_NRepetitions)
+        except:
+            repetitions = 1
+
         channels = int(self.method.PVM_EncAvailReceivers)
 
+        # Do complex combination and reshape
         fidData = fidData[0::2] + 1j * fidData[1::2]
-        fidData = np.reshape(fidData, (enc_matrix[0], -1), order='C')
-        if len(enc_matrix) == 2:
-            fidData = np.reshape(fidData, [enc_matrix[0], enc_matrix[1], slices, echoes, repetitions, channels],
-                                 order='F')
-        else:
-            fidData = np.reshape(fidData, [enc_matrix[0], enc_matrix[1], slices, echoes, repetitions, channels],
-                                 order='F')
+        # fidData = np.reshape(fidData, (enc_matrix[0], -1), order='C')
 
+        # Reshape data based on knowledge from meta data
+        if self.acqp.ACQ_dim == 2:
+            slices = np.sum(self.method.PVM_SPackArrNSlices.astype(np.int32))
+            fidData = np.reshape(fidData, [enc_matrix[0], enc_matrix[1], slices, echo_images, repetitions, channels],
+                                 order='F')
+        elif self.acqp.ACQ_dim == 3:
+            if echoes is not None:
+                fidData = np.reshape(fidData, [ int(np.rint(enc_matrix[0] / total_accel )),
+                                                channels,
+                                                phase_factor,
+                                                echoes,
+                                                int(np.rint(enc_matrix[1]/phase_factor)) *
+                                                enc_matrix[2] ],
+                                        order='C')
+                fidData = np.reshape(fidData, [int(np.rint(enc_matrix[0] / total_accel)),
+                                               channels,
+                                               phase_factor,
+                                               echoes,
+                                               int(np.rint(enc_matrix[1] / phase_factor)),
+                                               enc_matrix[2]],
+                                     order='F')
+
+                fidData = np.transpose(fidData, [0, 4, 5, 3, 2, 1])
+            else:
+                fidData = np.reshape(fidData, [ int(np.rint(enc_matrix[0] / total_accel )),
+                                                channels*
+                                                phase_factor*
+                                                enc_matrix[1]/phase_factor,
+                                                enc_matrix[2] ],
+                                        order='C')
+                fidData = np.reshape(fidData, [ int(np.rint(enc_matrix[0] / total_accel )),
+                                                channels,
+                                                phase_factor,
+                                                enc_matrix[1]/phase_factor,
+                                                enc_matrix[2] ],
+                                        order='F')
+
+                fidData = np.transpose(fidData, [0, 2, 3, 4, 5, 1]);
+
+
+
+            # fidData = np.reshape(fidData, [enc_matrix[0], enc_matrix[1], enc_matrix[2], echoes, repetitions, channels],
+            #                      order='F')
+
+            # fidData = np.reshape(fidData, [enc_matrix[0], enc_matrix[1], enc_matrix[2], echoes, repetitions, channels],
+            #                      order='F')
+
+            data = np.abs(fidData)
+
+            frame0 = data[:,:, 32, 0,0,0]
+            frame1 = data[:, :, 32, 0, 0, 1]
+            frame2 = data[:, :, 32, 0, 0, 2]
+            frame3 = data[:,:, 10, 0,0,0]
+            frame4 = data[:, :, 10, 0, 0, 1]
+            frame5 = data[:, :, 10, 0, 0, 2]
+            frame6 = data[:,:, 10, 1,0,0]
+            frame7 = data[:, :, 10, 1, 0, 1]
+            frame8 = data[:, :, 10, 1, 0, 2]
+
+
+            plt.figure()
+            plt.imshow(frame0)
+            plt.figure()
+            plt.imshow(frame1)
+            plt.figure()
+            plt.imshow(frame2)
+            plt.figure()
+            plt.imshow(frame3)
+            plt.figure()
+            plt.imshow(frame4)
+            plt.figure()
+            plt.imshow(frame5)
+            plt.figure()
+            plt.imshow(frame6)
+            plt.figure()
+            plt.imshow(frame7)
+            plt.figure()
+            plt.imshow(frame8)
+            plt.show()
+
+            a = 1
 
         # if len(fidData) != dimBlock * dimAcqHigh * dimZ * dimR * dimA:
         #     print('Missmatch')
