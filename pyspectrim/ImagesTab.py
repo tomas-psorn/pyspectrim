@@ -48,7 +48,6 @@ class ImagesTab(tk.Frame):
         self.imagesTree.heading('visibility', text='Visible')
 
         self.imagesTree.bind("<Button-1>", self.on_click)
-        self.imagesTree.bind("<Key>", self.on_key_enter)
 
         self.imagesTree.popup_menu = tk.Menu(self.imagesTree, tearoff=0)
         self.imagesTree.popup_menu.add_command(label="Encode visibility", command=self.encode_alpha)
@@ -62,25 +61,17 @@ class ImagesTab(tk.Frame):
 
         self.imagesTree.pack()
 
-    def encode_alpha(self):
-        image = self.get_image_on_focus()
-        encode_window = EncodeWindow(app=self.app, image=image)
+    def encode_alpha(self,event):
+        self.contentTabs.select(self)
+        self.imagesTree.focus_set()
+        self.imagesTree.focus(self.imagesTree.identify_row(event.y))
+        for image in self.images_list:
+            if image.tree_id == self.imagesTree.focus():
+                encode_window = EncodeWindow(app=self.app, image=image)
 
     # getters
     def get_visible(self):
         return self.images_vis_list
-
-    def get_image_on_focus(self):
-        for image in self.images_list:
-            if image.tree_id == self.imagesTree.focus():
-                return image
-            elif image.tree_id == self.imagesTree.selection()[0] and len(self.imagesTree.selection()[0]) == 1:
-                return image
-
-    # setters
-    def set_image_on_focus(self, image):
-        self.imagesTree.focus(image.tree_id)
-        self.app.contextTabs.update_context()
 
     def insert_image(self, file=None, image_code=None):
 
@@ -124,7 +115,7 @@ class ImagesTab(tk.Frame):
         self.app.cinema.imagePanel.update_geometry()
 
         # Update context
-        self.app.contextTabs.update_context()
+        self.app.contextTabs.set_context_image(image=image)
 
         # Draw what's to be drawn
         self.app.cinema.imagePanel.draw()
@@ -132,37 +123,32 @@ class ImagesTab(tk.Frame):
 
         # TODO this might not be neccessary
         self.imagesTree.selection_set(image_id)
-        self.set_image_on_focus(image)
-
-
-    # Handlers
-    def on_key_enter(self,event):
-        if event.keysym == 'Delete':
-            self.closeImage()
 
     def on_click(self, event):
-        self.contentTabs.select(self)
-        self.imagesTree.focus_set()
-        self.imagesTree.focus(self.imagesTree.identify_row(event.y))
-        # self.imagesTree.selection_add(self.imagesTree.identify_row(event.y))
-        # self.set_image_on_focus(image)
-        self.app.contextTabs.update_context()
+        self.app.contextTabs.set_context_image(image=self.get_clicked_on_image(event))
 
     def close_image(self):
-        code = self.imagesTree.selection()[0]
+        image = self.clicked_on_image
+        code = image.tree_id
 
-        for image in self.images_list:
-            if image.tree_id == code:
-                if image in self.images_list:
-                    self.images_list.remove(image)
-                if image in self.images_vis_list:
-                    self.images_vis_list.remove(image)
-                del image
+        if image in self.images_list:
+            self.images_list.remove(image)
+        if image in self.images_vis_list:
+            self.images_vis_list.remove(image)
+        # if image to be deleted was the one on focus, switch to other
+        if image.tree_id == self.app.contextTabs.get_context_image().tree_id:
+            if self.images_list:
+                self.app.contextTabs.set_context_image(self.images_list[0])
+                self.imagesTree.focus_set()
+                self.imagesTree.focus(self.images_list[0].tree_id)
+            else:
+                self.app.contextTabs.free_context_image()
+        del image
 
-                logging.info("Image {} deleted from the list".format(code))
+
+        logging.info("Image {} deleted from the list".format(code))
 
         self.imagesTree.delete(code)
-        self.app.contextTabs.update_context()
 
         self.app.cinema.imagePanel.update_geometry()
         self.app.cinema.imagePanel.draw_empty()
@@ -173,34 +159,39 @@ class ImagesTab(tk.Frame):
         logging.info("Image {} deleted from the tree".format(code))
 
     def popupContextMenu(self, event):
-        try:
-            code = self.imagesTree.selection()[0]
-        except IndexError:
-            return
-
+        # all functions invoked by the menu, will have access to the image
+        self.clicked_on_image = self.get_clicked_on_image(event)
         try:
             self.imagesTree.popup_menu.tk_popup(event.x_root, event.y_root, 0)
         finally:
             self.imagesTree.popup_menu.grab_release()
 
     # Context menu handle functions
+    def get_clicked_on_image(self,event):
+        self.contentTabs.select(self)
+        self.imagesTree.focus_set()
+        self.imagesTree.focus(self.imagesTree.identify_row(event.y))
+
+        for image in self.images_list:
+            if image.tree_id == self.imagesTree.focus():
+                return image
 
     def set_im_vis(self, value):
-        code = self.imagesTree.selection()[0]
-        for image in self.images_list:
-            if image.tree_id == code:
-                image.visibility = value
+        image = self.clicked_on_image
 
-                if value == 0.0:
-                    self.imagesTree.set(code, 'visibility','False')
-                    if image in self.images_vis_list:
-                        self.images_vis_list.remove(image)
-                else:
-                    self.imagesTree.set(code, 'visibility', 'True')
-                    if image not in self.images_vis_list:
-                        self.images_vis_list.append(image)
+        image.visibility = value
 
-        self.app.contextTabs.update_context()
+        if value == 0.0:
+            self.imagesTree.set(image.tree_id, 'visibility','False')
+            if image in self.images_vis_list:
+                self.images_vis_list.remove(image)
+        else:
+            self.imagesTree.set(image.tree_id, 'visibility', 'True')
+            if image not in self.images_vis_list:
+                self.images_vis_list.append(image)
+
+        self.clicked_on_image = None
+
         self.app.cinema.imagePanel.draw()
 
     def dimConsistCheck(self):
@@ -214,12 +205,13 @@ class ImagesTab(tk.Frame):
                     return False
         return True
 
-
     def reload_image_data(self):
-        image = self.get_image_on_focus()
+        image = self.clicked_on_image
         image.reload_data()
-        self.app.contextTabs.update_context()
+        self.app.contextTabs.update_context(image=image)
         self.app.cinema.imagePanel.draw()
+
+        self.clicked_on_image = None
 
 class EncodeWindow():
     def __init__(self, app=None, image=None):

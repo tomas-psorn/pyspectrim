@@ -62,12 +62,11 @@ class ImagePanel():
         self.zoom(zoom=zoom_)
 
     def zoom(self, zoom=None):
-        self.extent_from_phys *= zoom
-        self.extent_to_phys *= zoom
+        self.space_from *= zoom
+        self.space_to *= zoom
 
-        self.x_axis *= zoom
-        self.y_axis *= zoom
-        self.z_axis *= zoom
+        self.plane_x *= zoom
+        self.plane_y *= zoom
 
         self.draw()
 
@@ -89,18 +88,14 @@ class ImagePanel():
             self.pane(x=diff_x, y=0.0, z=diff_y)
 
     def pane(self,x=None, y=None, z=None):
-        self.extent_from_phys[0] += x
-        self.extent_from_phys[1] += y
-        self.extent_from_phys[2] += z
+        self.space_from[0] += x
+        self.space_from[1] += y
 
-        self.extent_to_phys[0] += x
-        self.extent_to_phys[1] += y
-        self.extent_to_phys[2] += z
+        self.space_to[0] += x
+        self.space_to[1] += y
 
-        self.x_axis += x
-        self.y_axis += y
-        self.z_axis += z
-
+        self.plane_x += x
+        self.plane_y += y
         self.draw()
 
 
@@ -108,51 +103,50 @@ class ImagePanel():
         self.center_x = int(self.max_dim/2)
         self.center_y = int(self.max_dim/2)
 
-        self.extent_from_phys = np.empty(3, dtype=np.float32)
-        self.extent_to_phys = np.empty(3, dtype=np.float32)
+        self.space_from = np.empty(2, dtype=np.float32)
+        self.space_to = np.empty(2, dtype=np.float32)
 
-        self.x_axis = None
-        self.y_axis = None
-        self.z_axis = None
+        self.plane_x = None
+        self.plane_y = None
 
-        self.plane_xy = None
-        self.plane_yz = None
-        self.plane_xz = None
 
     def update_geometry(self):
-        image = self.app.contentTabs.imagesTab.get_visible()[0]
-        ind_phys_switch = self.app.contextTabs.imageViewTab.indPhysSwitch.get()
 
-        if ind_phys_switch == IND_PHYS.IND.value:
-            self.extent_from_phys[0] = -0.5
-            self.extent_from_phys[1] = -0.5
-            self.extent_from_phys[2] = -0.5
+        visible_images = self.app.contentTabs.imagesTab.get_visible()
 
-            self.extent_to_phys[0] = 0.5
-            self.extent_to_phys[1] = 0.5
-            self.extent_to_phys[2] = 0.5
-        else :
-            self.extent_from_phys[0] = image.dim_from_phys[0]
-            self.extent_from_phys[1] = image.dim_from_phys[1]
-            self.extent_from_phys[2] = image.dim_from_phys[2]
+        if visible_images:
+            image = visible_images[0]
+            ind_phys_switch = self.app.contextTabs.imageViewTab.indPhysSwitch.get()
 
-            self.extent_to_phys[0] = image.dim_to_phys[0]
-            self.extent_to_phys[1] = image.dim_to_phys[1]
-            self.extent_to_phys[2] = image.dim_to_phys[2]
+            if ind_phys_switch == IND_PHYS.IND.value:
+                self.space_from[0] = -0.5
+                self.space_from[1] = -0.5
 
-        self.x_axis = np.linspace(self.extent_from_phys[0], self.extent_to_phys[0], self.max_dim)
-        self.y_axis = np.linspace(self.extent_from_phys[1], self.extent_to_phys[1], self.max_dim)
-        self.z_axis = np.linspace(self.extent_from_phys[2], self.extent_to_phys[2], self.max_dim)
+                self.space_to[0] = 0.5
+                self.space_to[1] = 0.5
+            else :
+                max_ext_ind = np.where(image.dim_phys_extent == np.amax(image.dim_phys_extent))
 
-        # self.plane_xy = Plane2D(x_axis=self.x_axis, y_axis=self.y_axis)
-        # self.plane_yz = Plane2D(x_axis=self.y_axis, y_axis=self.z_axis)
-        # self.plane_xz = Plane2D(x_axis=self.x_axis, y_axis=self.z_axis)
+                self.space_from[0] = image.dim_from_phys[max_ext_ind]
+                self.space_from[1] = image.dim_from_phys[max_ext_ind]
+
+                self.space_to[0] = image.dim_to_phys[max_ext_ind]
+                self.space_to[1] = image.dim_to_phys[max_ext_ind]
+
+            x_axis = np.linspace(self.space_from[0], self.space_to[0], self.max_dim)
+            y_axis = np.linspace(self.space_from[1], self.space_to[1], self.max_dim)
+
+            self.plane_x, self.plane_y = np.meshgrid(x_axis,y_axis)
+
+        else:
+            self.init_geometry()
 
     # event handlers
     def update_info(self, x=None, y=None):
-        orient = self.app.contextTabs.imageViewTab.get_view_orient()
+        orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
 
-        image = self.app.contentTabs.imagesTab.get_image_on_focus()
+        image = self.app.contextTabs.get_context_image()
+
         labels, pos_phys, units = image.get_pixel_info(x=x, y=y, orient=orient)
 
         text = ''
@@ -167,29 +161,24 @@ class ImagePanel():
         self.canvas.itemconfig(self.info_text_id, text=text)
         self.canvas.tag_raise(self.info_text_id)
 
-    def get_frame(self, image=None, orient=None):
+    def get_frame(self, image=None):
         """
         If anny external entity, histogram for instance, wishes to access the same frame, as displayed.
         :param image:
         :return:
         """
-        if orient is None:
-            orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
-
+        orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
         if orient == VIEW_ORIENT.TRANS.value:
-            return image.get_frame(orient=VIEW_ORIENT.TRANS.value, x_axis=self.x_axis, y_axis=self.y_axis)
+            return image.get_frame(orient=VIEW_ORIENT.TRANS.value, querry_x = self.plane_x, querry_y = self.plane_y)
         elif orient == VIEW_ORIENT.SAG.value:
-            return image.get_frame(orient=VIEW_ORIENT.SAG.value, x_axis=self.y_axis, y_axis=self.z_axis)
+            return image.get_frame(orient=VIEW_ORIENT.SAG.value, querry_x = self.plane_x, querry_y = self.plane_y)
         elif orient == VIEW_ORIENT.CORR.value:
-            return image.get_frame(orient=VIEW_ORIENT.CORR.value, x_axis=self.x_axis, y_axis=self.z_axis)
+            return image.get_frame(orient=VIEW_ORIENT.CORR.value, querry_x = self.plane_x, querry_y = self.plane_y)
 
 
     def draw(self):
         self.frame = Image.new('RGB', (self.max_dim, self.max_dim))
 
-        ind_phys_switch = IND_PHYS(self.app.contextTabs.imageViewTab.indPhysSwitch.get()).name
-        orient = self.app.contextTabs.imageViewTab.get_view_orient()
-        cmap = self.app.contextTabs.imageViewTab.getColorMap()
         imagesList = self.app.contentTabs.imagesTab.get_visible()
 
         # If images list is empty
@@ -199,51 +188,22 @@ class ImagePanel():
 
         frames = []
         alphas = []
-        frames_max_dim = 0
-        self.global_scale = 1.0
+
 
         for image in imagesList:
             alphas.append(image.visibility)
-
-            if orient == VIEW_ORIENT.TRANS.value:
-                frames.append(image.get_frame(orient=VIEW_ORIENT.TRANS.value, x_axis = self.x_axis, y_axis=self.y_axis))
-            elif orient == VIEW_ORIENT.SAG.value:
-                frames.append(image.get_frame(orient=VIEW_ORIENT.SAG.value, x_axis = self.y_axis, y_axis=self.z_axis))
-            elif orient == VIEW_ORIENT.CORR.value:
-                frames.append(image.get_frame(orient=VIEW_ORIENT.CORR.value, x_axis = self.x_axis, y_axis=self.z_axis))
-
-
-            if np.amax(frames[-1].shape) > frames_max_dim:
-                frames_max_dim = np.amax(frames[-1].shape)
-
-        self.global_scale = self.max_dim / frames_max_dim
-
-        # alphas = np.array(alphas)
-        # alphas = alphas / np.sum(alphas)
+            frames.append(self.get_frame(image=image))
 
         for frame_, alpha_ in zip(frames, alphas):
-            # frame = frame + frame_ * alpha_
-            # all frames are stretched so they fit the final artwork
-            # frame_ = frame_ * alpha_
-            frame_ = cv2.resize(frame_,None, fx=self.global_scale, fy=self.global_scale, interpolation=cv2.INTER_LINEAR)
-            pad_left = int(np.floor((self.max_dim - frame_.shape[1]) / 2))
-            pad_right = self.max_dim - frame_.shape[1] - pad_left
-            pad_top = int(np.floor((self.max_dim - frame_.shape[0]) / 2))
-            pad_bottom = self.max_dim - frame_.shape[0] - pad_top
-            frame_ = cv2.copyMakeBorder(frame_, top=pad_top, bottom=pad_bottom, left=pad_left, right=pad_right, borderType=cv2.BORDER_CONSTANT, value=0.0)
             frame_ = cv2.cvtColor(frame_.astype(np.uint8), cv2.COLOR_BGR2RGB)
             frame_ = Image.fromarray(frame_)
-
             self.frame = Image.blend(self.frame, frame_, alpha=alpha_)
 
         self.frame_tk = ImageTk.PhotoImage(self.frame)
-
         self.canvas.create_image(self.center_x, self.center_y,image = self.frame_tk)
-
         self.update_info()
 
         self.canvas.grid(column=0, row=0)
-
 
     def draw_empty(self):
         """

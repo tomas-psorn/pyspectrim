@@ -14,23 +14,36 @@ class ContextTabs(ttk.Notebook):
         self.app = app
         super().__init__(self.app.root)
 
+        self.image = None
+
+        # populate
         self.positionTab = PositionTab(self)
         self.imageViewTab = ImageViewTab(self)
         self.signalViewTab = SignalViewTab(self)
         self.loggerTab = LoggerTab(self)
 
+        # set default values
+        self.set_defaults()
 
-    def update_context(self):
-        current_tab = self.tab(self.select(),'text')
+    def set_defaults(self):
+        self.positionTab.set_defaults()
+        self.imageViewTab.set_defaults()
+        self.signalViewTab.set_defaults()
 
-        # state dependent - must be updated allways
-        self.imageViewTab.indPhysSwitch.update()
+    def set_context_image(self, image=None):
+        # this function does not call any draw function along the way
+        if image is not None:
+            self.image = image
 
-        # image dependent
-        if current_tab == "Position":
-            self.positionTab.on_visible()
-        elif current_tab == "Image":
-            self.imageViewTab.on_visible()
-        elif current_tab == "Logger":
-            pass
+            self.positionTab.set_context(image=self.image)
+            self.imageViewTab.set_context(image=self.image)
+            self.signalViewTab.set_context(image=self.image)
+
+    def free_context_image(self):
+        self.image = None
+        self.set_defaults()
+
+    def get_context_image(self):
+        return self.image
+
 

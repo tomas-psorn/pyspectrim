@@ -11,3 +11,16 @@ class IND_PHYS(Enum):
 
 class POINT_TRANS(Enum):
     LIN, POW, LOG = range(3)
+
+class COLOR_MAP(Enum):
+    # this fits to opencv colormap codes
+    GRAY, WINTER, JET = 1,3,2
+
+    def __getitem__(self, item):
+        # get value by name
+        if item == 'GRAY':
+            return self.GRAY
+        elif item == 'WINTER':
+            return self.WINTER
+        elif item == 'JET':
+            return self.JET

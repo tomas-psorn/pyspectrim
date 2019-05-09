@@ -26,44 +26,25 @@ class ImageViewTab(tk.Frame):
         self.colorMapOptions = ColorMapOption(self)
         self.contrastEnhance = ContrastEnhance(self)
 
+    def set_defaults(self):
+        self.alphaSlider.set_defaults()
+        self.colorMapOptions.set_defaults()
+        self.contrastEnhance.set_defaults()
+        self.indPhysSwitch.set_defaults()
+        self.view_orient_switch.set_defaults()
+        self.complex_part_switch.set_defaults()
 
-    # event handlers
-    def on_visible(self, event=None):
-        self.update()
-
-    def update(self):
-        image = self.app.contentTabs.imagesTab.get_image_on_focus()
+    def set_context(self, image=None):
         if image is None:
             self.set_defaults()
             return
 
-        self.alphaSlider.set_image(image)
-        self.colorMapOptions.set_image(image)
-        self.contrastEnhance.set_image(image)
-
-    def set_defaults(self):
-        self.alphaSlider.set_image(None)
-        self.colorMapOptions.set_image(None)
-        self.contrastEnhance.set_image(None)
-
-    # setters, getters
-    def setIndPhys(self,value):
-        self.indPhysSwitch.set(value)
-
-    def get_view_orient(self):
-        return self.view_orient_switch.value.get()
-
-    def getColorMap(self):
-        return self.colorMapOptions.value
-
-    def lockIndPhysSwitch(self,value):
-        self.indPhysSwitch.lock(value)
-
-    # maintenance
-    def clean(self):
-        self.alphaSlider.value.set(1.0)
-        self.indPhysSwitch.lock(False)
-        self.indPhysSwitch.set('ind')
+        self.alphaSlider.set_context(image=image)
+        self.indPhysSwitch.set_context(image=image)
+        self.view_orient_switch.set_context(image=image)
+        self.colorMapOptions.set_context(image=image)
+        self.contrastEnhance.set_context(image=image)
+        self.complex_part_switch.set_context(image=image)
 
     def destroy(self):
         self.alphaSlider.layout.destroy()
@@ -95,32 +76,35 @@ class AlphaSlider(tk.Scale):
         self.pack(anchor=tk.W)
         self.layout.pack(fill=tk.X)
 
+    # set default and set context
+    def set_defaults(self):
+        self.value.set(1.0)
+
+    def set_context(self, image=None):
+        self.value.set(image.visibility)
+
     # event handlers
     def drag(self, event):
         value = self.get()
 
-        if self.image.visibility == 0.0 and value > 0.0:
-            self.app.contentTabs.imagesTab.imagesTree.set(self.image.tree_id, 'visibility', 'True')
-            self.app.contentTabs.imagesTab.images_vis_list.append(self.image)
-        elif self.image.visibility > 0.0 and value == 0.0:
-            self.app.contentTabs.imagesTab.imagesTree.set(self.image.tree_id, 'visibility', 'False')
-            self.app.contentTabs.imagesTab.images_vis_list.remove(self.image)
+        image = self.tab.contextTabs.get_context_image()
 
-        self.image.visibility = value
+        if image.visibility == 0.0 and value > 0.0:
+            self.app.contentTabs.imagesTab.imagesTree.set(image.tree_id, 'visibility', 'True')
+            self.app.contentTabs.imagesTab.images_vis_list.append(image)
+        elif image.visibility > 0.0 and value == 0.0:
+            self.app.contentTabs.imagesTab.imagesTree.set(image.tree_id, 'visibility', 'False')
+            self.app.contentTabs.imagesTab.images_vis_list.remove(image)
+
+        image.visibility = value
         self.app.cinema.imagePanel.draw()
-
-    def set_image(self,image):
-        self.image = image
-        self.set(image.visibility)
-
-
-    def free_image(self):
-        self.image = None
 
     def set(self,value):
         self.value.set(value)
         if self.image:
             self.image.visibility = value
+
+    # no getter here, read visibility value from image on context
 
 class IndPhysSwitch():
     def __init__(self, tab):
@@ -144,22 +128,29 @@ class IndPhysSwitch():
 
         self.layout.pack(fill=tk.X)
 
+    def set_defaults(self):
+        self.lock(False)
+        self.value.set(IND_PHYS.IND.value)
+
+    def set_context(self, image=None):
+        # does not depend on image
+        pass
+
     def set(self, value):
         self.value.set(value)
+        self.app.cinema.imagePanel.update_geometry()
         self.app.cinema.imagePanel.draw()
-
 
     def get(self):
         return self.value.get()
 
     def update(self):
         if self.app.contentTabs.imagesTab.dimConsistCheck():
-            self.app.contextTabs.imageViewTab.setIndPhys(IND_PHYS.IND.value)
-            self.app.contextTabs.imageViewTab.lockIndPhysSwitch(False)
+            self.value.set(IND_PHYS.IND.value)
+            self.lock(False)
         else:
-            self.app.contextTabs.imageViewTab.lockIndPhysSwitch(True)
-            self.app.contextTabs.imageViewTab.setIndPhys(IND_PHYS.PHYS.value)
-
+            self.lock(True)
+            self.value.set(IND_PHYS.PHYS.value)
 
     def lock(self,value):
         if value == True:
@@ -207,6 +198,13 @@ class ViewOrientSwitch():
 
         self.layout.pack(fill=tk.X)
 
+    def set_defaults(self):
+        self.value.set(VIEW_ORIENT.TRANS.value)
+
+    def set_context(self, image=None):
+        # does not depend on image
+        pass
+
     def set(self, value):
         self.value.set(value)
         self.app.cinema.imagePanel.draw()
@@ -221,10 +219,11 @@ class ColorMapOption(tk.OptionMenu):
         self.app = tab.app
         self.image = None
 
-        self.optionsList = ('gray', 'winter','jet')
+        # this has to match with COLOR_MAP definition
+        self.optionsList = ('GRAY', 'WINTER','JET')
 
         self.value = tk.StringVar()
-        self.value.set( self.optionsList[0])
+        self.value.set( COLOR_MAP.GRAY.name)
 
         self.layout = tk.LabelFrame(self.tab, text='Color map')
 
@@ -233,122 +232,39 @@ class ColorMapOption(tk.OptionMenu):
         self.pack(anchor=tk.W)
         self.layout.pack(fill=tk.X)
 
-    def set_image(self,image):
-        self.image = image
-        self.value = image.colormap
+    def set_defaults(self):
+        self.value.set(COLOR_MAP.GRAY.name)
 
-    def free_image(self):
-        self.image = None
+    def set_context(self, image=None):
+        self.value.set(COLOR_MAP(image.colormap).name)
 
     def set(self, value):
-        self.image.colormap = value
+        image = self.tab.contextTabs.get_context_image()
+        image.colormap = COLOR_MAP[self.value.get()].value
         self.app.cinema.imagePanel.draw()
+
+    # no getter here, read color map value from image on context
 
 class ContrastEnhance():
     def __init__(self, tab):
 
         self.tab = tab
         self.app = tab.app
-        self.image = None
 
         self.layout = tk.LabelFrame(self.tab, text='Contrast enhance')
         self.layout.pack(fill=tk.X)
 
-        self.min_var = tk.StringVar()
-        self.max_var = tk.StringVar()
-        self.clip_stretch_var = tk.BooleanVar()
-
-        # The default enhancement mode is clip
-        self.clip_stretch_var.set(True)
-        #
-        # self.min_var.trace('w',callback=self.set_min)
-        # self.max_var.trace('w', callback=self.set_max)
-
-        self.min_entry = tk.Entry(self.layout, textvariable=self.min_var)
-        self.max_entry = tk.Entry(self.layout, textvariable=self.max_var)
-        self.apply_button = tk.Button(self.layout, text="Apply to data", command=self.apply_enhance)
-        self.hist_norm_button = tk.Button(self.layout, text="Normalize histogram", command=self.hist_norm)
         self.enhance_button = tk.Button(self.layout, text="Enhance", command=self.enhance_window_popup)
+        self.enhance_button.pack()
 
-        self.stretch_button = tk.Radiobutton(self.layout,
-                                    text='stretch',
-                                    variable=self.clip_stretch_var,
-                                    value=0,
-                                    command=self.on_switch_click
-                                    )
+    def set_defaults(self):
+        pass
 
-        self.clip_button = tk.Radiobutton(self.layout,
-                                    text='clip',
-                                    variable=self.clip_stretch_var,
-                                    value=1,
-                                    command=self.on_switch_click
-                                    )
-
-        self.min_entry.bind('<Return>', self.set_min)
-        self.max_entry.bind('<Return>', self.set_max)
-
-        self.min_label = tk.Label(self.layout, text="min:")
-        self.max_label = tk.Label(self.layout, text="max:")
-
-        self.min_label.grid(row=0,column=0)
-        self.min_entry.grid(row=0,column=1)
-        self.max_label.grid(row=0,column=2)
-        self.max_entry.grid(row=0,column=3)
-        self.clip_button.grid(row=1,column=0, columnspan=2)
-        self.stretch_button.grid(row=1,column=2, columnspan=2)
-
-
-        # self.min_label.pack(side=tk.LEFT)
-        # self.min_entry.pack(side=tk.LEFT)
-        # self.max_label.pack(side=tk.LEFT)
-        # self.max_entry.pack(side=tk.LEFT)
-        # self.stretch_button.pack(side=tk.BOTTOM)
-        # self.clip_button.pack(side=tk.BOTTOM)
-
-
-        self.apply_button.grid(row=2,column=0, columnspan=2)
-        self.hist_norm_button.grid(row=2,column=2, columnspan=2)
-        self.enhance_button.grid(row=3,column=0, columnspan=2)
+    def set_context(self, image=None):
+        pass
 
     def enhance_window_popup(self):
-        enhance_window = EnhanceWindow(app=self.app, image=self.image)
-
-    def on_switch_click(self):
-        self.app.cinema.imagePanel.draw()
-
-    def set_image(self,image):
-        self.image = image
-        self.min_var.set(str(self.image.min_preview))
-        self.max_var.set(str(self.image.max_preview))
-
-    def free_image(self):
-        self.image = None
-
-    def set_min(self, event):
-        if self.image:
-            value = float(self.min_var.get())
-            # If value entered is lower than data minimum
-            if value < self.image.min_data or value > float(self.max_var.get()):
-                # write the minimal value into the entry
-                self.min_var.set(str(self.image.min_data))
-                self.image.min_preview = self.image.min_data
-            else:
-                self.image.min_preview = value
-
-            self.app.cinema.imagePanel.draw()
-
-    def set_max(self, event):
-        if self.image:
-            value = float(self.max_var.get())
-            # If value entered is lower than data minimum
-            if value > self.image.max_data or value < float(self.min_var.get()):
-                # write the minimal value into the entry
-                self.max_var.set(str(self.image.max_data))
-                self.image.max_preview = self.image.max_data
-            else:
-                self.image.max_preview = value
-
-            self.app.cinema.imagePanel.draw()
+        enhance_window = EnhanceWindow(app=self.app, image=self.tab.contextTabs.get_context_image())
 
     def hist_norm(self):
         if self.image:
@@ -358,13 +274,6 @@ class ContrastEnhance():
 
             self.app.cinema.imagePanel.draw()
             self.app.contextTabs.update_context()
-
-    def apply_enhance(self):
-        if self.image:
-            self.image.apply_enhance()
-
-        self.app.contextTabs.update_context()
-        self.app.cinema.imagePanel.draw()
 
 class EnhanceWindow():
     def __init__(self, app=None, image=None):
@@ -412,7 +321,6 @@ class EnhanceWindow():
         self.app.cinema.imagePanel.draw()
         self.app.cinema.imagePanel.update_info()
 
-
 class ComplexPartSwitch():
     def __init__(self, tab):
         self.tab = tab
@@ -455,11 +363,15 @@ class ComplexPartSwitch():
 
         self.layout.pack(fill=tk.X)
 
-    def set(self, value):
-        # todo
-        #  if switched to indexed redraw
-        self.value.set(value)
+    def set_defaults(self):
+        self.value.set(COMPLEX_PART.ABS.value)
 
+    def set_context(self, image=None):
+        # not image dependent
+        pass
+
+    def set(self, value):
+        self.value.set(value)
         self.app.cinema.imagePanel.draw()
         self.app.cinema.signalPanel.draw()
 

@@ -41,7 +41,7 @@ class Image(object):
 
         self._visibility = 1.0
         self.alpha_mask = None
-        self._colormap = cv2.COLORMAP_BONE
+        self._colormap = COLOR_MAP.GRAY.value
 
         self.min_data = np.amin(self.data)
         self.max_data = np.amax(self.data)
@@ -52,6 +52,8 @@ class Image(object):
         self.reset_enhance()
 
         self.aspect = self.dim_phys_extent / np.amax(self.dim_phys_extent)
+
+        self.init_geometry()
 
     def init_from_dataset(self, kwargs):
 
@@ -193,7 +195,7 @@ class Image(object):
                     self.z_axis = pars['VisuCorePosition'][:, 2]
                     self.dim_from_phys = np.append(self.dim_from_phys, self.z_axis[0])
                     self.dim_to_phys = np.append(self.dim_to_phys, self.z_axis[-1])
-                    self.dim_phys_extent = np.append(self.dim_phys_extent, np.subtract(self.z_axis[0], self.z_axis[-1]))
+                    self.dim_phys_extent = np.append(self.dim_phys_extent, np.abs(np.subtract(self.z_axis[0], self.z_axis[-1])))
 
                 elif pars["VisuFGOrderDesc"][i][1] == "FG_MOVIE":
                     self.dim_size = np.append(self.dim_size, int(pars["VisuFGOrderDesc"][i][0]))
@@ -381,6 +383,17 @@ class Image(object):
         # remove singleton dimensions
         self.data = np.squeeze(self.data)
 
+    def init_geometry(self):
+        points = np.rollaxis(np.array(np.meshgrid(self.x_axis, self.y_axis)), 0, 3)
+        self.transverse_plane = np.reshape(points, [points.shape[0] * points.shape[1], points.shape[2]])
+
+        points = np.rollaxis(np.array(np.meshgrid(self.y_axis,self.z_axis)),0,3)
+        self.sagittal_plane = np.reshape(points, [points.shape[0] * points.shape[1], points.shape[2]])
+
+        points = np.rollaxis(np.array(np.meshgrid(self.x_axis, self.z_axis)), 0, 3)
+        self.corronal_plane = np.reshape(points, [points.shape[0] * points.shape[1], points.shape[2]])
+
+
     def __getitem__(self, key):
         return getattr(self, key)
 
@@ -391,15 +404,7 @@ class Image(object):
 
     @colormap.setter
     def colormap(self,value):
-        if value == 'gray':
-            self._colormap = cv2.COLORMAP_BONE
-        elif value == 'winter':
-            self._colormap = cv2.COLORMAP_COOL
-        elif value == 'jet':
-            self._colormap = cv2.COLORMAP_JET
-        else:
-            self._colormap = cv2.COLORMAP_BONE
-            logging.debug("Colormap: {} unknown".format(value))
+        self._colormap = value
 
     @property
     def visibility(self):
@@ -420,32 +425,25 @@ class Image(object):
         ind_phys_switch = IND_PHYS(self.app.contextTabs.imageViewTab.indPhysSwitch.get()).value
         complex_part_switch = COMPLEX_PART(self.app.contextTabs.imageViewTab.complex_part_switch.get()).value
 
-        if ind_phys_switch == IND_PHYS.PHYS.value:
-            x_axis = self.x_axis
-            y_axis = self.y_axis
-            z_axis = self.z_axis
-        else:
-            aspect_2 = self.aspect / 2
-            x_axis = np.linspace( -1.0 * aspect_2[0], aspect_2[0], self.dim_size[0] )
-            y_axis = np.linspace(-1.0 * aspect_2[1], aspect_2[1], self.dim_size[1])
-            z_axis = np.linspace(-1.0 * aspect_2[2], aspect_2[2], self.dim_size[2])
-
         location_high = tuple(self.dim_pos[3:])
         # coronal
         if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
             location_low = ( slice( 0, self.dim_size[0] ), slice( 0, self.dim_size[1] ), self.dim_pos[2] )
-            x_axis_im = x_axis
-            y_axis_im = y_axis
+            plane = self.transverse_plane.copy()
         # sagital
         elif kwargs['orient'] == VIEW_ORIENT.SAG.value:
             location_low = (self.dim_pos[0], slice(0, self.dim_size[1]), slice(0, self.dim_size[2]))
-            x_axis_im = y_axis
-            y_axis_im = z_axis
+            plane = self.sagittal_plane.copy()
         # axial
         elif kwargs['orient'] == VIEW_ORIENT.CORR.value:
             location_low = (slice(0, self.dim_size[0]), self.dim_pos[1], slice(0, self.dim_size[2]))
-            x_axis_im = x_axis
-            y_axis_im = z_axis
+            plane = self.corronal_plane.copy()
+
+        # normalize plane
+        if ind_phys_switch == IND_PHYS.IND.value:
+            plane -=np.amin(plane)
+            plane /= np.amax(plane)
+            plane -= 0.5
 
         frame = self.data[location_low+ location_high]
 
@@ -458,21 +456,31 @@ class Image(object):
         else:
             frame = np.imag(frame)
 
+        # interpolated frame to the geometry of caller
+
         # interpolate alpha mask
         if self.alpha_mask is not None:
             alpha = self.alpha_mask[location_low]
-            # frame = self.apply_visibility(frame=frame, alpha=alpha)
-            a = interpolate.interp2d(y_axis_im, x_axis_im, alpha, kind='linear', fill_value=0.0)
-            alpha = a(kwargs['x_axis'], kwargs['y_axis'])
-            alpha = 255.0*alpha
 
-        # interpolated frame to the geometry of caller
-        f = interpolate.interp2d(y_axis_im, x_axis_im, frame, kind='linear', fill_value=0.0)
-        frame = f(kwargs['x_axis'], kwargs['y_axis'])
+            # IMROT90
+            if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
+                alpha = np.transpose(alpha, (1, 0))
+
+            alpha = interpolate.griddata(plane, alpha.flatten(), (kwargs['querry_x'], kwargs['querry_y']), method='nearest',
+                                 fill_value=0.0)
+
+            alpha = 255.0*alpha
 
         # IMROT90
         if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
             frame = np.transpose(frame,(1,0))
+
+        frame = interpolate.griddata(plane, frame.flatten(), (kwargs['querry_x'], kwargs['querry_y']),  method='nearest', fill_value=0.0)
+        # f = interpolate.interp2d(x_axis_im, y_axis_im, frame, kind='linear', fill_value=0.0)
+        # frame = f(kwargs['x_axis'], kwargs['y_axis'])
+
+
+
 
         if enhance:
             frame = self.apply_enhance_(frame=frame)

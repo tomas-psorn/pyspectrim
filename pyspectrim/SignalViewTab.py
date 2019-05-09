@@ -11,3 +11,9 @@ class SignalViewTab(tk.Frame):
 
         super().__init__(self.contextTabs)
         self.contextTabs.add(self, text="Signal")
+
+    def set_defaults(self):
+        pass
+
+    def set_context(self, image=None):
+        pass
