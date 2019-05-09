@@ -119,16 +119,21 @@ class ImagesTab(tk.Frame):
         self.imagesTree.set(image_id, 'size',getImageSizeStr(image))
         self.imagesTree.set(image_id, 'dtype',image.data.dtype)
         self.imagesTree.set(image_id, 'visibility',image.isVisible())
-        self.imagesTree.selection_set(image_id)
-        self.set_image_on_focus(image)
+
+        # Needs to be done first
+        self.app.cinema.imagePanel.update_geometry()
 
         # Update context
         self.app.contextTabs.update_context()
 
         # Draw what's to be drawn
-        self.app.cinema.imagePanel.update_geometry()
         self.app.cinema.imagePanel.draw()
         self.app.cinema.signalPanel.draw()
+
+        # TODO this might not be neccessary
+        self.imagesTree.selection_set(image_id)
+        self.set_image_on_focus(image)
+
 
     # Handlers
     def on_key_enter(self,event):
@@ -235,7 +240,7 @@ class EncodeWindow():
         self.treeview.heading('#0', text='Image')
         self.populate()
 
-        self.treeview.bind("<Button-1>", self.on_click)
+        self.treeview.bind("<Double-1>", self.on_double_click)
 
         self.treeview.pack()
         self.treeview_frame.pack()
@@ -243,7 +248,7 @@ class EncodeWindow():
         self.done_button = tk.Button(self.encode_window, text="Okay", command=self.encode_window.destroy)
         self.done_button.pack()
 
-    def on_click(self,event):
+    def on_double_click(self,event):
         image_to_enc = self.get_image_on_focus()
         self.image.encode_visibility(image_to_enc=image_to_enc)
         self.app.cinema.imagePanel.draw()

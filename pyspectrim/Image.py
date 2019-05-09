@@ -1,4 +1,5 @@
-from pyspectrim.File import getH5Id
+from pyspectrim.File import Scan, Reco
+
 
 from pyspectrim.enums import *
 
@@ -419,22 +420,32 @@ class Image(object):
         ind_phys_switch = IND_PHYS(self.app.contextTabs.imageViewTab.indPhysSwitch.get()).value
         complex_part_switch = COMPLEX_PART(self.app.contextTabs.imageViewTab.complex_part_switch.get()).value
 
+        if ind_phys_switch == IND_PHYS.PHYS.value:
+            x_axis = self.x_axis
+            y_axis = self.y_axis
+            z_axis = self.z_axis
+        else:
+            aspect_2 = self.aspect / 2
+            x_axis = np.linspace( -1.0 * aspect_2[0], aspect_2[0], self.dim_size[0] )
+            y_axis = np.linspace(-1.0 * aspect_2[1], aspect_2[1], self.dim_size[1])
+            z_axis = np.linspace(-1.0 * aspect_2[2], aspect_2[2], self.dim_size[2])
+
         location_high = tuple(self.dim_pos[3:])
         # coronal
         if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
             location_low = ( slice( 0, self.dim_size[0] ), slice( 0, self.dim_size[1] ), self.dim_pos[2] )
-            x_axis_im = self.x_axis
-            y_axis_im = self.y_axis
+            x_axis_im = x_axis
+            y_axis_im = y_axis
         # sagital
         elif kwargs['orient'] == VIEW_ORIENT.SAG.value:
             location_low = (self.dim_pos[0], slice(0, self.dim_size[1]), slice(0, self.dim_size[2]))
-            x_axis_im = self.y_axis
-            y_axis_im = self.z_axis
+            x_axis_im = y_axis
+            y_axis_im = z_axis
         # axial
         elif kwargs['orient'] == VIEW_ORIENT.CORR.value:
             location_low = (slice(0, self.dim_size[0]), self.dim_pos[1], slice(0, self.dim_size[2]))
-            x_axis_im = self.x_axis
-            y_axis_im = self.z_axis
+            x_axis_im = x_axis
+            y_axis_im = z_axis
 
         frame = self.data[location_low+ location_high]
 
@@ -447,22 +458,17 @@ class Image(object):
         else:
             frame = np.imag(frame)
 
+        # interpolate alpha mask
         if self.alpha_mask is not None:
             alpha = self.alpha_mask[location_low]
             # frame = self.apply_visibility(frame=frame, alpha=alpha)
             a = interpolate.interp2d(y_axis_im, x_axis_im, alpha, kind='linear', fill_value=0.0)
             alpha = a(kwargs['x_axis'], kwargs['y_axis'])
+            alpha = 255.0*alpha
 
-        if ind_phys_switch == IND_PHYS.PHYS.value:
-            if not 'x_axis' in kwargs or not 'y_axis' in kwargs:
-                logging.debug('Missing axis information, while phys switch is selected')
-                return None
-
-            f = interpolate.interp2d(y_axis_im, x_axis_im, frame, kind='linear', fill_value=0.0)
-            frame = f(kwargs['x_axis'], kwargs['y_axis'])
-            f = interpolate.interp2d(y_axis_im, x_axis_im, frame, kind='linear', fill_value=0.0)
-            frame = f(kwargs['x_axis'], kwargs['y_axis'])
-
+        # interpolated frame to the geometry of caller
+        f = interpolate.interp2d(y_axis_im, x_axis_im, frame, kind='linear', fill_value=0.0)
+        frame = f(kwargs['x_axis'], kwargs['y_axis'])
 
         # IMROT90
         if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
@@ -482,7 +488,7 @@ class Image(object):
 
         if self.alpha_mask is not None:
             b, g, r = cv2.split(frame)
-            frame =  cv2.merge((b, r, g, alpha))
+            frame =  cv2.merge((b, r, g, alpha.astype(np.uint8)))
 
         return frame
 
@@ -639,9 +645,21 @@ class Image(object):
 
     def reload_data(self):
         for file in self.app.contentTabs.filesTab.filesList:
-            if file.filename in self.tree_id:
-                self.data = np.array(file.file[self.tree_id.split(".h5")[1]])
-                self.data = np.squeeze(self.data) #todo remove this after debugging jcamdx parser
+            if str(file.filename) in self.tree_id:
+                if file.__class__.__name__ == 'FileHdf5':
+                    self.data = np.array(file.file[self.tree_id.split(".h5")[1]])
+                    self.data = np.squeeze(self.data) #todo remove this after debugging jcamdx parser
+                elif file.__class__.__name__ == 'FileBruker':
+                    tmp = self.tree_id.split('.')
+                    code = tmp[-1]
+                    path = ''.join(tmp[0:-1])
+
+                    # this is clumsy, but due to proc virtualization, it's necessary
+                    if 'reco' in code:
+                        image = Image(app=self.app, reco=Reco(path=path), tree_id=self.tree_id)
+
+                    self.data = image.data
+
                 self.min_data = np.amin(self.data)
                 self.max_data = np.amax(self.data)
                 self.min_preview = self.min_data

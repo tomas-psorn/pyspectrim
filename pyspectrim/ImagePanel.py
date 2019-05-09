@@ -121,22 +121,32 @@ class ImagePanel():
 
     def update_geometry(self):
         image = self.app.contentTabs.imagesTab.get_visible()[0]
+        ind_phys_switch = self.app.contextTabs.imageViewTab.indPhysSwitch.get()
 
-        self.extent_from_phys[0] = image.dim_from_phys[0]
-        self.extent_from_phys[1] = image.dim_from_phys[1]
-        self.extent_from_phys[2] = image.dim_from_phys[2]
+        if ind_phys_switch == IND_PHYS.IND.value:
+            self.extent_from_phys[0] = -0.5
+            self.extent_from_phys[1] = -0.5
+            self.extent_from_phys[2] = -0.5
 
-        self.extent_to_phys[0] = image.dim_to_phys[0]
-        self.extent_to_phys[1] = image.dim_to_phys[1]
-        self.extent_to_phys[2] = image.dim_to_phys[2]
+            self.extent_to_phys[0] = 0.5
+            self.extent_to_phys[1] = 0.5
+            self.extent_to_phys[2] = 0.5
+        else :
+            self.extent_from_phys[0] = image.dim_from_phys[0]
+            self.extent_from_phys[1] = image.dim_from_phys[1]
+            self.extent_from_phys[2] = image.dim_from_phys[2]
+
+            self.extent_to_phys[0] = image.dim_to_phys[0]
+            self.extent_to_phys[1] = image.dim_to_phys[1]
+            self.extent_to_phys[2] = image.dim_to_phys[2]
 
         self.x_axis = np.linspace(self.extent_from_phys[0], self.extent_to_phys[0], self.max_dim)
         self.y_axis = np.linspace(self.extent_from_phys[1], self.extent_to_phys[1], self.max_dim)
         self.z_axis = np.linspace(self.extent_from_phys[2], self.extent_to_phys[2], self.max_dim)
 
-        self.plane_xy = Plane2D(x_axis=self.x_axis, y_axis=self.y_axis)
-        self.plane_yz = Plane2D(x_axis=self.y_axis, y_axis=self.z_axis)
-        self.plane_xz = Plane2D(x_axis=self.x_axis, y_axis=self.z_axis)
+        # self.plane_xy = Plane2D(x_axis=self.x_axis, y_axis=self.y_axis)
+        # self.plane_yz = Plane2D(x_axis=self.y_axis, y_axis=self.z_axis)
+        # self.plane_xz = Plane2D(x_axis=self.x_axis, y_axis=self.z_axis)
 
     # event handlers
     def update_info(self, x=None, y=None):
@@ -163,24 +173,15 @@ class ImagePanel():
         :param image:
         :return:
         """
-        ind_phys_switch = IND_PHYS(self.app.contextTabs.imageViewTab.indPhysSwitch.get()).name
         if orient is None:
             orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
 
-        if ind_phys_switch == IND_PHYS.IND.name:
-            if orient == VIEW_ORIENT.TRANS.value:
-                return image.get_frame(orient=VIEW_ORIENT.TRANS.value, max_dim=self.max_dim)
-            elif orient == VIEW_ORIENT.SAG.value:
-                return image.get_frame(orient=VIEW_ORIENT.SAG.value, max_dim=self.max_dim)
-            elif orient == VIEW_ORIENT.CORR.value:
-                return image.get_frame(orient=VIEW_ORIENT.CORR.value, max_dim=self.max_dim)
-        elif ind_phys_switch == IND_PHYS.PHYS.name:
-            if orient == VIEW_ORIENT.TRANS.value:
-                return image.get_frame(orient=VIEW_ORIENT.TRANS.value, x_axis=self.x_axis, y_axis=self.y_axis)
-            elif orient == VIEW_ORIENT.SAG.value:
-                return image.get_frame(orient=VIEW_ORIENT.SAG.value, x_axis=self.y_axis, y_axis=self.z_axis)
-            elif orient == VIEW_ORIENT.CORR.value:
-                return image.get_frame(orient=VIEW_ORIENT.CORR.value, x_axis=self.x_axis, y_axis=self.z_axis)
+        if orient == VIEW_ORIENT.TRANS.value:
+            return image.get_frame(orient=VIEW_ORIENT.TRANS.value, x_axis=self.x_axis, y_axis=self.y_axis)
+        elif orient == VIEW_ORIENT.SAG.value:
+            return image.get_frame(orient=VIEW_ORIENT.SAG.value, x_axis=self.y_axis, y_axis=self.z_axis)
+        elif orient == VIEW_ORIENT.CORR.value:
+            return image.get_frame(orient=VIEW_ORIENT.CORR.value, x_axis=self.x_axis, y_axis=self.z_axis)
 
 
     def draw(self):
@@ -204,20 +205,12 @@ class ImagePanel():
         for image in imagesList:
             alphas.append(image.visibility)
 
-            if ind_phys_switch == IND_PHYS.IND.name:
-                if orient == VIEW_ORIENT.TRANS.value:
-                    frames.append(image.get_frame(orient=VIEW_ORIENT.TRANS.value, max_dim = self.max_dim))
-                elif orient == VIEW_ORIENT.SAG.value:
-                    frames.append(image.get_frame(orient=VIEW_ORIENT.SAG.value, max_dim = self.max_dim))
-                elif orient == VIEW_ORIENT.CORR.value:
-                    frames.append(image.get_frame(orient=VIEW_ORIENT.CORR.value, max_dim = self.max_dim))
-            elif ind_phys_switch == IND_PHYS.PHYS.name:
-                if orient == VIEW_ORIENT.TRANS.value:
-                    frames.append(image.get_frame(orient=VIEW_ORIENT.TRANS.value, x_axis = self.x_axis, y_axis=self.y_axis))
-                elif orient == VIEW_ORIENT.SAG.value:
-                    frames.append(image.get_frame(orient=VIEW_ORIENT.SAG.value, x_axis = self.y_axis, y_axis=self.z_axis))
-                elif orient == VIEW_ORIENT.CORR.value:
-                    frames.append(image.get_frame(orient=VIEW_ORIENT.CORR.value, x_axis = self.x_axis, y_axis=self.z_axis))
+            if orient == VIEW_ORIENT.TRANS.value:
+                frames.append(image.get_frame(orient=VIEW_ORIENT.TRANS.value, x_axis = self.x_axis, y_axis=self.y_axis))
+            elif orient == VIEW_ORIENT.SAG.value:
+                frames.append(image.get_frame(orient=VIEW_ORIENT.SAG.value, x_axis = self.y_axis, y_axis=self.z_axis))
+            elif orient == VIEW_ORIENT.CORR.value:
+                frames.append(image.get_frame(orient=VIEW_ORIENT.CORR.value, x_axis = self.x_axis, y_axis=self.z_axis))
 
 
             if np.amax(frames[-1].shape) > frames_max_dim:

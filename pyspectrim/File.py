@@ -254,10 +254,12 @@ class Scan(object):
         echo_images = int(self.method.PVM_NEchoImages)
         total_accel = self.method.PVM_EncTotalAccel
         phase_factor = int(self.acqp.ACQ_phase_factor)
+        slices = int(self.acqp.NI)
+
         try:
             echoes = int(self.acqp.NECHOES)
         except:
-            echoes = None
+            echoes = 1
 
         try:
             repetitions = int(self.method.PVM_NRepetitions)
@@ -272,9 +274,24 @@ class Scan(object):
 
         # Reshape data based on knowledge from meta data
         if self.acqp.ACQ_dim == 2:
-            slices = np.sum(self.method.PVM_SPackArrNSlices.astype(np.int32))
-            fidData = np.reshape(fidData, [enc_matrix[0], enc_matrix[1], slices, echo_images, repetitions, channels],
+            fidData = np.reshape(fidData, [enc_matrix[0],
+                                           channels,
+                                           phase_factor*
+                                           slices*
+                                           int(np.rint(enc_matrix[1] / phase_factor)) *
+                                           repetitions],
+                                 order='C')
+            fidData = np.reshape(fidData, [enc_matrix[0],
+                                           channels,
+                                           phase_factor,
+                                           slices,
+                                           int(np.rint(enc_matrix[1] / phase_factor)),
+                                           repetitions],
                                  order='F')
+            fidData = np.transpose(fidData, [0, 2, 4, 3, 5, 1])
+            fidData =  np.reshape(fidData, [enc_matrix[0], enc_matrix[1], slices, repetitions, channels], order='F')
+
+
         elif self.acqp.ACQ_dim == 3:
             if echoes is not None:
                 fidData = np.reshape(fidData, [ int(np.rint(enc_matrix[0] / total_accel )),
@@ -293,21 +310,21 @@ class Scan(object):
                                      order='F')
 
                 fidData = np.transpose(fidData, [0, 4, 5, 3, 2, 1])
-            else:
-                fidData = np.reshape(fidData, [ int(np.rint(enc_matrix[0] / total_accel )),
-                                                channels*
-                                                phase_factor*
-                                                enc_matrix[1]/phase_factor,
-                                                enc_matrix[2] ],
-                                        order='C')
-                fidData = np.reshape(fidData, [ int(np.rint(enc_matrix[0] / total_accel )),
-                                                channels,
-                                                phase_factor,
-                                                enc_matrix[1]/phase_factor,
-                                                enc_matrix[2] ],
-                                        order='F')
-
-                fidData = np.transpose(fidData, [0, 2, 3, 4, 5, 1]);
+            # else:
+            #     fidData = np.reshape(fidData, [ int(np.rint(enc_matrix[0] / total_accel )),
+            #                                     channels*
+            #                                     phase_factor*
+            #                                     enc_matrix[1]/phase_factor,
+            #                                     enc_matrix[2] ],
+            #                             order='C')
+            #     fidData = np.reshape(fidData, [ int(np.rint(enc_matrix[0] / total_accel )),
+            #                                     channels,
+            #                                     phase_factor,
+            #                                     enc_matrix[1]/phase_factor,
+            #                                     enc_matrix[2] ],
+            #                             order='F')
+            #
+            #     fidData = np.transpose(fidData, [0, 2, 3, 4, 5, 1])
 
 
 
