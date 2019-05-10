@@ -420,30 +420,63 @@ class Image(object):
             self._visibility = value
 
     # getters
+    def get_axes(self, orient=None, ind_phys=None):
+        if orient == VIEW_ORIENT.TRANS.value:
+            if ind_phys == IND_PHYS.PHYS.value:
+                return self.x_axis, self.y_axis
+            else:
+                x_im = self.x_axis.copy()
+                y_im = self.y_axis.copy()
+                aspect_x = self.aspect[0]
+                aspect_y = self.aspect[0]
+        elif orient == VIEW_ORIENT.SAG.value:
+            if ind_phys == IND_PHYS.PHYS.value:
+                return self.y_axis, self.z_axis
+            else:
+                x_im = self.y_axis.copy()
+                y_im = self.z_axis.copy()
+                aspect_x = self.aspect[1]
+                aspect_y = self.aspect[2]
+        elif orient == VIEW_ORIENT.CORR.value:
+            if ind_phys == IND_PHYS.PHYS.value:
+                return self.x_axis, self.z_axis
+            else:
+                x_im = self.x_axis.copy()
+                y_im = self.z_axis.copy()
+                aspect_x = self.aspect[0]
+                aspect_y = self.aspect[2]
+
+        x_im -= np.amin(x_im)
+        y_im -= np.amin(y_im)
+
+        x_im /= np.amax(x_im)
+        y_im /= np.amax(y_im)
+
+        x_im *= aspect_x
+        y_im *= aspect_y
+
+        x_im -= np.amax(x_im) / 2.0
+        y_im -= np.amax(y_im) / 2.0
+
+        return x_im, y_im
+
+    def get_location_low(self, orient=None):
+        if orient == VIEW_ORIENT.TRANS.value:
+            return ( slice( 0, self.dim_size[0] ), slice( 0, self.dim_size[1] ), self.dim_pos[2] )
+        elif orient == VIEW_ORIENT.SAG.value:
+            return (self.dim_pos[0], slice(0, self.dim_size[1]), slice(0, self.dim_size[2]))
+        elif orient == VIEW_ORIENT.CORR.value:
+            return (slice(0, self.dim_size[0]), self.dim_pos[1], slice(0, self.dim_size[2]))
+
     def get_frame(self, enhance=True, **kwargs):
 
         ind_phys_switch = IND_PHYS(self.app.contextTabs.imageViewTab.indPhysSwitch.get()).value
         complex_part_switch = COMPLEX_PART(self.app.contextTabs.imageViewTab.complex_part_switch.get()).value
 
-        location_high = tuple(self.dim_pos[3:])
-        # coronal
-        if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
-            location_low = ( slice( 0, self.dim_size[0] ), slice( 0, self.dim_size[1] ), self.dim_pos[2] )
-            plane = self.transverse_plane.copy()
-        # sagital
-        elif kwargs['orient'] == VIEW_ORIENT.SAG.value:
-            location_low = (self.dim_pos[0], slice(0, self.dim_size[1]), slice(0, self.dim_size[2]))
-            plane = self.sagittal_plane.copy()
-        # axial
-        elif kwargs['orient'] == VIEW_ORIENT.CORR.value:
-            location_low = (slice(0, self.dim_size[0]), self.dim_pos[1], slice(0, self.dim_size[2]))
-            plane = self.corronal_plane.copy()
+        x_im, y_im = self.get_axes(orient=kwargs['orient'], ind_phys=ind_phys_switch)
 
-        # normalize plane
-        if ind_phys_switch == IND_PHYS.IND.value:
-            plane -=np.amin(plane)
-            plane /= np.amax(plane)
-            plane -= 0.5
+        location_low = self.get_location_low(orient=kwargs['orient'])
+        location_high = tuple(self.dim_pos[3:])
 
         frame = self.data[location_low+ location_high]
 
@@ -456,7 +489,8 @@ class Image(object):
         else:
             frame = np.imag(frame)
 
-        # interpolated frame to the geometry of caller
+        q = np.array([kwargs['querry_x'], kwargs['querry_y']])
+        q = np.transpose(q, (1, 2, 0))
 
         # interpolate alpha mask
         if self.alpha_mask is not None:
@@ -466,21 +500,10 @@ class Image(object):
             if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
                 alpha = np.transpose(alpha, (1, 0))
 
-            alpha = interpolate.griddata(plane, alpha.flatten(), (kwargs['querry_x'], kwargs['querry_y']), method='nearest',
-                                 fill_value=0.0)
-
+            alpha = interpolate.interpn((x_im, y_im), alpha, q, method='nearest', bounds_error=False, fill_value=0.0)
             alpha = 255.0*alpha
 
-        # IMROT90
-        if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
-            frame = np.transpose(frame,(1,0))
-
-        frame = interpolate.griddata(plane, frame.flatten(), (kwargs['querry_x'], kwargs['querry_y']),  method='nearest', fill_value=0.0)
-        # f = interpolate.interp2d(x_axis_im, y_axis_im, frame, kind='linear', fill_value=0.0)
-        # frame = f(kwargs['x_axis'], kwargs['y_axis'])
-
-
-
+        frame = interpolate.interpn((x_im,y_im), frame, q, method='nearest', bounds_error=False, fill_value =0.0  )
 
         if enhance:
             frame = self.apply_enhance_(frame=frame)
@@ -491,7 +514,6 @@ class Image(object):
         frame = frame * self.visibility
         frame = frame.astype(np.uint8)
         # todo this has to be done on cinema level
-        # frame = self.resize(frame, export_size)
         frame = self.applyColormap(frame)
 
         if self.alpha_mask is not None:
