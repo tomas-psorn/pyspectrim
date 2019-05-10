@@ -112,14 +112,12 @@ class ImagesTab(tk.Frame):
         self.imagesTree.set(image_id, 'visibility',image.isVisible())
 
         # Needs to be done first
-        self.app.cinema.imagePanel.update_geometry()
+        self.app.cinema.update_geometry()
 
         # Update context
         self.app.contextTabs.set_context_image(image=image)
 
-        # Draw what's to be drawn
-        self.app.cinema.imagePanel.draw()
-        self.app.cinema.signalPanel.draw()
+        self.app.cinema.draw()
 
         # TODO this might not be neccessary
         self.imagesTree.selection_set(image_id)
@@ -150,11 +148,9 @@ class ImagesTab(tk.Frame):
 
         self.imagesTree.delete(code)
 
-        self.app.cinema.imagePanel.update_geometry()
-        self.app.cinema.imagePanel.draw_empty()
-        self.app.cinema.imagePanel.draw()
-        self.app.cinema.signalPanel.draw_empty()
-        self.app.cinema.signalPanel.draw()
+        self.app.cinema.update_geometry()
+        self.app.cinema.draw_empty()
+        self.app.cinema.draw()
 
         logging.info("Image {} deleted from the tree".format(code))
 
@@ -192,7 +188,7 @@ class ImagesTab(tk.Frame):
 
         self.clicked_on_image = None
 
-        self.app.cinema.imagePanel.draw()
+        self.app.cinema.draw()
 
     def dimConsistCheck(self):
         """
@@ -209,7 +205,7 @@ class ImagesTab(tk.Frame):
         image = self.clicked_on_image
         image.reload_data()
         self.app.contextTabs.update_context(image=image)
-        self.app.cinema.imagePanel.draw()
+        self.app.cinema.draw()
 
         self.clicked_on_image = None
 
@@ -243,7 +239,7 @@ class EncodeWindow():
     def on_double_click(self,event):
         image_to_enc = self.get_image_on_focus()
         self.image.encode_visibility(image_to_enc=image_to_enc)
-        self.app.cinema.imagePanel.draw()
+        self.app.cinema.draw(signal=False)
         self.encode_window.destroy()
 
     def get_image_on_focus(self):

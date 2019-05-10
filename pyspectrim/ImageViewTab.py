@@ -97,7 +97,7 @@ class AlphaSlider(tk.Scale):
             self.app.contentTabs.imagesTab.images_vis_list.remove(image)
 
         image.visibility = value
-        self.app.cinema.imagePanel.draw()
+        self.app.cinema.draw(signal=False)
 
     def set(self,value):
         self.value.set(value)
@@ -138,8 +138,8 @@ class IndPhysSwitch():
 
     def set(self, value):
         self.value.set(value)
-        self.app.cinema.imagePanel.update_geometry()
-        self.app.cinema.imagePanel.draw()
+        self.app.cinema.update_geometry()
+        self.app.cinema.draw(signal=False)
 
     def get(self):
         return self.value.get()
@@ -207,7 +207,7 @@ class ViewOrientSwitch():
 
     def set(self, value):
         self.value.set(value)
-        self.app.cinema.imagePanel.draw()
+        self.app.cinema.draw(ortho=False, signal=False)
 
     def get(self):
         return self.value.get()
@@ -241,7 +241,7 @@ class ColorMapOption(tk.OptionMenu):
     def set(self, value):
         image = self.tab.contextTabs.get_context_image()
         image.colormap = COLOR_MAP[self.value.get()].value
-        self.app.cinema.imagePanel.draw()
+        self.app.cinema.draw()
 
     # no getter here, read color map value from image on context
 
@@ -272,7 +272,7 @@ class ContrastEnhance():
             self.min_var.set(str(self.image.min_preview))
             self.max_var.set(str(self.image.max_preview))
 
-            self.app.cinema.imagePanel.draw()
+            self.app.cinema.draw()
             self.app.contextTabs.update_context()
 
 class EnhanceWindow():
@@ -290,7 +290,7 @@ class EnhanceWindow():
 
         ax = self.hist_fig.add_subplot(111)
         n, bins, patches = ax.hist(image.data.flatten(), 250, density=False, label='data')
-        n, bins, patches = ax.hist(self.app.cinema.imagePanel.get_frame(image=image).flatten(), 50, density=False, label='frame')
+        n, bins, patches = ax.hist(self.app.cinema.image_panel_main.get_frame(image=image).flatten(), 50, density=False, label='frame')
         # ax.legend(loc='upper right')
 
         self.pow_frame = tk.LabelFrame(self.options_frame, text='Power')
@@ -318,8 +318,8 @@ class EnhanceWindow():
         if float(self.pow_coef_entry.get()) != 1.0:
             self.image.set_enhance(pow=float(self.pow_coef_entry.get()))
 
-        self.app.cinema.imagePanel.draw()
-        self.app.cinema.imagePanel.update_info()
+        self.app.cinema.draw()
+        self.app.cinema.image_panel_main.update_info()
 
 class ComplexPartSwitch():
     def __init__(self, tab):
@@ -372,8 +372,7 @@ class ComplexPartSwitch():
 
     def set(self, value):
         self.value.set(value)
-        self.app.cinema.imagePanel.draw()
-        self.app.cinema.signalPanel.draw()
+        self.app.cinema.draw()
 
     def get(self):
         return self.value.get()

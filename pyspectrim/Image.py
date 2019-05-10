@@ -513,9 +513,9 @@ class Image(object):
 
         y_label = None
 
-        x_label = 't'
+        x_label = 't [s]'
 
-        legend = '{} dim:{}'.format(self.tree_id.split('.h5')[1], dim_order)
+        legend = '{} dim:{}'.format(self.tree_name, dim_order)
 
         return x, y, x_label, y_label, legend
 

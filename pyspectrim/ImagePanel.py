@@ -16,88 +16,28 @@ from matplotlib.figure import Figure
 
 import logging
 
-class ImagePanel():
-    def __init__(self, cinema):
 
-        self.cinema = cinema
+class ImagePanel():
+    def __init__(self, **kwargs):
+
+        self.cinema = kwargs['cinema']
         self.app = self.cinema.app
 
         # todo relate to window size
-        self.max_dim = 400
+        self.max_dim = kwargs['max_dim']
 
-        # used to fit the biggest dimension of any frame to max dim
-        self.global_scale = 1.0
+        if 'fix_orient' in kwargs:
+            self.fix_orient = kwargs['fix_orient']
+        else:
+            self.fix_orient = None
 
         self.init_geometry()
 
         self.frame = None
 
         # canvas is currently supposed to be square
-        self.canvas = tk.Canvas(self.cinema, bg='black')
+        self.canvas = tk.Canvas(kwargs['frame'], bg='black')
         self.canvas.config(width=self.max_dim, height=self.max_dim)
-
-        self.popup_menu = tk.Menu(self.canvas, tearoff=0)
-        self.popup_menu.add_command(label="Reset", command=self.reset_view)
-
-        self.canvas.bind("<Button-3>", self.popup_context_menu)
-        self.canvas.bind("<MouseWheel>", self.on_scroll)
-        self.canvas.bind("<Button-1>", self.set_drag_start)
-        self.canvas.bind("<B1-Motion>", self.on_drag)
-
-        # reference to text object indicating position and a value of pixel
-        self.canvas.grid(column=0, row=0)
-
-    def popup_context_menu(self, event):
-        try:
-            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
-        finally:
-            self.popup_menu.grab_release()
-
-    def reset_view(self):
-        self.update_geometry()
-        self.draw()
-
-    def on_scroll(self, event):
-        zoom_ = 1.0 + 5/event.delta
-        self.zoom(zoom=zoom_)
-
-    def zoom(self, zoom=None):
-        self.space_from *= zoom
-        self.space_to *= zoom
-
-        self.plane_x *= zoom
-        self.plane_y *= zoom
-
-        self.draw()
-
-    def set_drag_start(self,event):
-        self.drag_start_x = event.x
-        self.drag_start_y = event.y
-
-    def on_drag(self, event):
-        diff_x = (self.drag_start_y - event.y) / self.max_dim
-        diff_y = (self.drag_start_x - event.x) / self.max_dim
-
-        orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
-
-        if orient == VIEW_ORIENT.TRANS.value:
-            self.pane(x=diff_x, y=diff_y, z=0.0)
-        elif orient == VIEW_ORIENT.SAG.value:
-            self.pane(x=0.0, y=diff_x, z=diff_y)
-        elif orient == VIEW_ORIENT.TRANS.value:
-            self.pane(x=diff_x, y=0.0, z=diff_y)
-
-    def pane(self,x=None, y=None, z=None):
-        self.space_from[0] += x
-        self.space_from[1] += y
-
-        self.space_to[0] += x
-        self.space_to[1] += y
-
-        self.plane_x += x
-        self.plane_y += y
-        self.draw()
-
 
     def init_geometry(self):
         self.center_x = int(self.max_dim/2)
@@ -141,40 +81,23 @@ class ImagePanel():
         else:
             self.init_geometry()
 
-    # event handlers
-    def update_info(self, x=None, y=None):
-        orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
-
-        image = self.app.contextTabs.get_context_image()
-
-        labels, pos_phys, units = image.get_pixel_info(x=x, y=y, orient=orient)
-
-        text = ''
-
-        for label, phys, unit in zip(labels, pos_phys, units):
-            try:
-                text += '{}: {:.2f} {} \n'.format(label, phys, unit)
-            except:
-                text += '{}: {} {} \n'.format(label, phys, unit)
-
-        self.info_text_id = self.canvas.create_text(10, 10, fill="white", text='', anchor=tk.N + tk.W)
-        self.canvas.itemconfig(self.info_text_id, text=text)
-        self.canvas.tag_raise(self.info_text_id)
-
     def get_frame(self, image=None):
         """
         If anny external entity, histogram for instance, wishes to access the same frame, as displayed.
         :param image:
         :return:
         """
-        orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
+        if self.fix_orient is not None:
+            orient = self.fix_orient
+        else:
+            orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
+
         if orient == VIEW_ORIENT.TRANS.value:
             return image.get_frame(orient=VIEW_ORIENT.TRANS.value, querry_x = self.plane_x, querry_y = self.plane_y)
         elif orient == VIEW_ORIENT.SAG.value:
             return image.get_frame(orient=VIEW_ORIENT.SAG.value, querry_x = self.plane_x, querry_y = self.plane_y)
         elif orient == VIEW_ORIENT.CORR.value:
             return image.get_frame(orient=VIEW_ORIENT.CORR.value, querry_x = self.plane_x, querry_y = self.plane_y)
-
 
     def draw(self):
         self.frame = Image.new('RGB', (self.max_dim, self.max_dim))
@@ -201,7 +124,6 @@ class ImagePanel():
 
         self.frame_tk = ImageTk.PhotoImage(self.frame)
         self.canvas.create_image(self.center_x, self.center_y,image = self.frame_tk)
-        self.update_info()
 
         self.canvas.grid(column=0, row=0)
 
@@ -211,3 +133,88 @@ class ImagePanel():
         :return:
         """
         self.canvas.delete("all")
+
+
+class ImagePanelMain(ImagePanel):
+    def __init__(self, **kwargs):
+        super(ImagePanelMain, self).__init__(**kwargs)
+
+        self.popup_menu = tk.Menu(self.canvas, tearoff=0)
+        self.popup_menu.add_command(label="Reset", command=self.reset_view)
+
+        self.canvas.bind("<Button-3>", self.popup_context_menu)
+        self.canvas.bind("<MouseWheel>", self.on_scroll)
+        self.canvas.bind("<Button-1>", self.set_drag_start)
+        self.canvas.bind("<B1-Motion>", self.on_drag)
+
+    def popup_context_menu(self, event):
+        try:
+            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+        finally:
+            self.popup_menu.grab_release()
+
+    def reset_view(self):
+        self.update_geometry()
+        self.draw()
+
+    def on_scroll(self, event):
+        zoom_ = 1.0 + 5 / event.delta
+        self.zoom(zoom=zoom_)
+
+    def zoom(self, zoom=None):
+        self.space_from *= zoom
+        self.space_to *= zoom
+
+        self.plane_x *= zoom
+        self.plane_y *= zoom
+
+        self.draw()
+
+    def set_drag_start(self, event):
+        self.drag_start_x = event.x
+        self.drag_start_y = event.y
+
+    def on_drag(self, event):
+        diff_x = (self.drag_start_y - event.y) / self.max_dim
+        diff_y = (self.drag_start_x - event.x) / self.max_dim
+
+        orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
+
+        if orient == VIEW_ORIENT.TRANS.value:
+            self.pane(x=diff_x, y=diff_y, z=0.0)
+        elif orient == VIEW_ORIENT.SAG.value:
+            self.pane(x=0.0, y=diff_x, z=diff_y)
+        elif orient == VIEW_ORIENT.TRANS.value:
+            self.pane(x=diff_x, y=0.0, z=diff_y)
+
+    def pane(self, x=None, y=None, z=None):
+        self.space_from[0] += x
+        self.space_from[1] += y
+
+        self.space_to[0] += x
+        self.space_to[1] += y
+
+        self.plane_x += x
+        self.plane_y += y
+        self.draw()
+
+    def update_info(self, x=None, y=None):
+        orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
+
+        image = self.app.contextTabs.get_context_image()
+
+        labels, pos_phys, units = image.get_pixel_info(x=x, y=y, orient=orient)
+
+        text = ''
+
+        for label, phys, unit in zip(labels, pos_phys, units):
+            try:
+                text += '{}: {:.2f} {} \n'.format(label, phys, unit)
+            except:
+                text += '{}: {} {} \n'.format(label, phys, unit)
+
+        self.info_text_id = self.canvas.create_text(10, 10, fill="white", text='', anchor=tk.N + tk.W)
+        self.canvas.itemconfig(self.info_text_id, text=text)
+        self.canvas.tag_raise(self.info_text_id)
+
+
