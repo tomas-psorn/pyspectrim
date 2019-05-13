@@ -141,6 +141,7 @@ class ImagePanelMain(ImagePanel):
 
         self.popup_menu = tk.Menu(self.canvas, tearoff=0)
         self.popup_menu.add_command(label="Reset", command=self.reset_view)
+        self.popup_menu.add_command(label="Save as", command=self.save_view)
 
         self.canvas.bind("<Button-3>", self.popup_context_menu)
         self.canvas.bind("<MouseWheel>", self.on_scroll)
@@ -156,6 +157,12 @@ class ImagePanelMain(ImagePanel):
     def reset_view(self):
         self.update_geometry()
         self.draw()
+
+    def save_view(self):
+
+        filename = tk.filedialog.asksaveasfile(defaultextension=".png")
+        self.frame.save(filename.name)
+
 
     def on_scroll(self, event):
         zoom_ = 1.0 + 5 / event.delta
