@@ -505,8 +505,8 @@ class Image(object):
 
         frame = interpolate.interpn((x_im,y_im), frame, q, method='nearest', bounds_error=False, fill_value =0.0  )
 
-        if enhance:
-            frame = self.apply_enhance_(frame=frame)
+        # if enhance:
+        #     frame = self.apply_enhance_(frame=frame)
 
         # todo change to apply_enhancement
         # frame = self.apply_preview(frame)
@@ -608,8 +608,9 @@ class Image(object):
             return self.min_preview + (range_preview * (frame - self.min_data) / range_data)
 
     def frame_to_0_255(self, frame):
-        255.0 * frame / self.max_preview
+        # todo should be max_preview
         return 255.0 * frame / self.max_preview
+
 
     def applyColormap(self,frame):
         return cv2.applyColorMap(frame, self.colormap)
