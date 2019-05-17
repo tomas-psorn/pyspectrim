@@ -43,7 +43,7 @@ class Image(object):
         self.alpha_mask = None
         self._colormap = COLOR_MAP.GRAY.value
 
-        self.reset_min_max()
+        self.reset_min_max_()
 
         self.reset_enhance()
 
@@ -114,9 +114,7 @@ class Image(object):
         self.axes = []
 
         for i in range(0,self.ndim):
-            half_spac = self.dim_spacing[i] /2.0
-            axis = np.zeros(self.dim_size[i])
-            self.axes.append(axis, self.calc_axis())
+            self.axes.append(self.calc_axis(from_=self.dim_from_phys[i], dim=self.dim_size[i], spacing=self.dim_spacing[i]))
 
     def init_from_reco(self, kwargs):
 
@@ -438,11 +436,11 @@ class Image(object):
         # remove singleton dimensions
         self.data = np.squeeze(self.data)
 
-    def reset_min_max(self):
+    def reset_min_max_(self):
         self.min_data = np.zeros((4,))
         self.max_data = np.zeros((4,))
 
-        if self.data.dtype == np.complex:
+        if 'complex' in self.data.dtype.name:
             self.min_data[0] = np.amin(np.abs(self.data))
             self.min_data[1] = np.amin(np.angle(self.data))
             self.min_data[2] = np.amin(np.real(self.data))
@@ -570,12 +568,20 @@ class Image(object):
         frame = self.data[location_low+ location_high]
 
         if complex_part_switch == COMPLEX_PART.ABS.value:
+            min_preview = self.min_preview[0]
+            max_preview = self.max_preview[0]
             frame = np.abs(frame)
         elif complex_part_switch == COMPLEX_PART.PHASE.value:
+            min_preview = self.min_preview[1]
+            max_preview = self.max_preview[1]
             frame = np.angle(frame)
         elif complex_part_switch == COMPLEX_PART.RE.value:
+            min_preview = self.min_preview[2]
+            max_preview = self.max_preview[2]
             frame = np.real(frame)
         else:
+            min_preview = self.min_preview[3]
+            max_preview = self.max_preview[3]
             frame = np.imag(frame)
 
         q = np.array([kwargs['querry_x'], kwargs['querry_y']])
@@ -599,7 +605,7 @@ class Image(object):
 
         # todo change to apply_enhancement
         # frame = self.apply_preview(frame)
-        frame = self.frame_to_0_255(frame)
+        frame = self.frame_to_0_255(frame=frame, min_= min_preview, max_=max_preview)
         frame = frame * self.visibility
         frame = frame.astype(np.uint8)
         # todo this has to be done on cinema level
@@ -696,9 +702,9 @@ class Image(object):
             range_preview = self.max_preview - self.min_preview
             return self.min_preview + (range_preview * (frame - self.min_data) / range_data)
 
-    def frame_to_0_255(self, frame):
-        # todo should be max_preview
-        return 255.0 * frame / self.max_preview
+    def frame_to_0_255(self, frame=None, min_ = None, max_=None):
+        range = max_ - min_
+        return 255.0 * (frame-min_) / range
 
 
     def applyColormap(self,frame):
@@ -734,19 +740,13 @@ class Image(object):
         clip_stretch_switch = self.app.contextTabs.imageViewTab.contrastEnhance.clip_stretch_var.get()
         if clip_stretch_switch is True:
             self.data = np.clip(self.data,self.min_preview,self.max_preview)
-            self.min_data = np.amin(self.data)
-            self.max_data = np.amax(self.data)
-            self.min_preview = self.min_data
-            self.max_preview = self.max_data
+            self.reset_min_max_()
 
         else:
             range_data = self.max_data - self.min_data
             range_preview = self.max_preview - self.min_preview
             self.data = range_preview * (self.data - self.min_data) / range_data
-            self.min_data = np.amin(self.data)
-            self.max_data = np.amax(self.data)
-            self.min_preview = self.min_data
-            self.max_preview = self.max_data
+            self.reset_min_max_()
 
     def apply_enhance_(self, frame=None):
         if self.point_trans == POINT_TRANS.POW.value:
@@ -780,10 +780,7 @@ class Image(object):
 
                     self.data = image.data
 
-                self.min_data = np.amin(self.data)
-                self.max_data = np.amax(self.data)
-                self.min_preview = self.min_data
-                self.max_preview = self.max_data
+                self.reset_min_max_()
 
                 self.alpha_mask = None
 
