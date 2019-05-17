@@ -51,48 +51,77 @@ class Image(object):
 
         self.reset_enhance()
 
-        self.aspect = self.dim_phys_extent / np.amax(self.dim_phys_extent)
+        self.aspect = self.dim_phys_extent[0:3] / np.amax(self.dim_phys_extent[0:3])
 
-        self.init_geometry()
 
     def init_from_dataset(self, kwargs):
 
         dataset = kwargs['dataset']
         self.data = np.array(dataset)
 
-        self.dim_size = np.array(dataset.attrs['dim_size'])
-        self.ndim = dataset.attrs['ndim']
+        self.dim_size = np.array(self.data.shape)
+        self.ndim = len(self.dim_size)
 
-        self.dim_label = ['x', 'y', 'z']
-        self.dim_from_phys = np.array(dataset.attrs['slice_pos'][0, :])
+        # dim_from
+        try:
+            dim_from = dataset.attrs['dim_from']
+        except:
+            dim_from = np.zeros(shape=(self.ndim,))
+        self.dim_from_phys = dim_from
 
-        for i in range(0, self.ndim - 3):
-            self.dim_label.append(dataset.attrs['dim_desc'][i + 3].decode('UTF-8'))
-            self.dim_from_phys = np.append(self.dim_from_phys, 0.0)
+        # dim_label
+        try:
+            dim_label = dataset.attrs['dim_label']
+        except:
+            dim_label = ['x', 'y', 'z']
+            for i in range(0, self.ndim - 3):
+                dim_label.append('NA')
+        self.dim_label = dim_label
 
-        self.dim_phys_extent = np.array(dataset.attrs['dim_extent'])
+        # dim_desc
+        try:
+            dim_desc = dataset.attrs['dim_desc']
+        except:
+            dim_desc = ['spatial', 'spatial', 'spatial']
+            for i in range(0, self.ndim - 3):
+                dim_desc.append('NA')
+        self.dim_desc = dim_desc
+
+        # dim_extent
+        try:
+            dim_extent = dataset.attrs['dim_extent']
+        except:
+            dim_extent = self.dim_size.astype(float)
+        self.dim_phys_extent = dim_extent
+
+        # dim_units
+        try:
+            dim_units =  dataset.attrs['dim_units']
+        except:
+            dim_units = []
+            for i in range(0, self.ndim):
+                dim_units.append('NA')
+        self.dim_units = dim_units
+
+        # data_units
+        try:
+            data_units =  dataset.attrs['data_units']
+        except:
+            data_units = None
+        self.data_units = data_units
+
         self.dim_to_phys = self.dim_from_phys + self.dim_phys_extent
-
-        self.dim_from = np.zeros(shape=(self.ndim,), dtype=np.int32)
-        self.dim_to = self.dim_size
-
-        # todo include slice spacing
         self.dim_spacing = self.dim_phys_extent / self.dim_size
+        self.slice_orient = None
+        self.slice_pos = None
 
-        # there must be better way to do this
-        self.dim_units = dataset.attrs['dim_units'].tolist()
-        for i in range(0, len(self.dim_units)):
-            self.dim_units[i] = self.dim_units[i].decode()
+        self.axes = []
 
-        for key in dataset.attrs:
-            if "comment" in key:
-                comment = dataset.attrs[key].tolist()
-                for i in range(0, len(comment)):
-                    comment[i] = comment[i].decode()
+        for i in range(0,self.ndim):
+            half_spac = self.dim_spacing[i] /2.0
+            axis = np.zeros(self.dim_size[i])
+            self.axes.append(axis, self.calc_axis())
 
-                setattr(self, key, comment)
-
-        self.dim_spacing = self.dim_phys_extent / self.dim_size
 
     def init_from_reco(self, kwargs):
 
@@ -117,9 +146,11 @@ class Image(object):
         self.dim_phys_extent = np.empty(shape=(0, 0), dtype=np.float32)  # physical extent of each dimension
         self.dim_from_phys = np.empty(shape=(0, 0), dtype=np.float32)
         self.dim_to_phys = np.empty(shape=(0, 0), dtype=np.float32)
+        self.dim_spacing = np.empty(shape=(0, 0), dtype=np.float32)
         self.dim_units = []  # string of each dimension's unit
         self.dim_desc = []  # category of each dimension {spatial, spectroscopical, temporal, categorical}
         self.dim_label = []  # label of each dimension
+        self.axes = []
         self.slice_orient = None
         self.slice_pos = None
 
@@ -144,6 +175,7 @@ class Image(object):
         for i in range(0, self.ndim):
             self.dim_size = np.append(self.dim_size, int(pars["VisuCoreSize"][i]))
             self.dim_phys_extent = np.append(self.dim_phys_extent, float(pars["VisuCoreExtent"][i]))
+            self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[i] / self.dim_size[i])
             self.dim_units.append(pars["VisuCoreUnits"][i])
             self.dim_desc.append(pars["VisuCoreDimDesc"][i])
 
@@ -152,21 +184,15 @@ class Image(object):
                 if i == 0:
                     self.dim_label.append('x')
                     self.dim_from_phys = np.append(self.dim_from_phys, pars['VisuCorePosition'][0][0])
-                    self.dim_to_phys = np.append(self.dim_to_phys, self.dim_from_phys[i] + self.dim_phys_extent[i])
-                    self.x_axis = np.linspace(self.dim_from_phys[i], self.dim_to_phys[i], self.dim_size[i])
 
                 elif i == 1:
                     self.dim_label.append('y')
                     self.dim_from_phys = np.append(self.dim_from_phys, pars['VisuCorePosition'][0][1])
-                    self.dim_to_phys = np.append(self.dim_to_phys, self.dim_from_phys[i] + self.dim_phys_extent[i])
-                    self.y_axis = np.linspace(self.dim_from_phys[i], self.dim_to_phys[i], self.dim_size[i])
                 elif i == 2:
                     # this branch implies 3D scan, 3D dimension of pseudo 3D experiments is covered by
                     # FG_SLICE framegroup, see bellow
                     self.dim_label.append('z')
                     self.dim_from_phys = np.append(self.dim_from_phys, pars['VisuCorePosition'][0][2])
-                    self.dim_to_phys = np.append(self.dim_to_phys, self.dim_from_phys[i] + self.dim_phys_extent[i])
-                    self.z_axis = np.linspace(self.dim_from_phys[i], self.dim_to_phys[i], self.dim_size[i])
 
             elif self.dim_desc == 'spectroscopic':
                 if i == 0:
@@ -177,6 +203,9 @@ class Image(object):
                     self.dim_label.append('spectrum_2')
             else:
                 raise KeyError('Bad thing happened')
+
+            self.dim_to_phys = np.append(self.dim_to_phys, self.dim_from_phys[i] + self.dim_phys_extent[i])
+            self.axes.append(self.calc_axis(from_=self.dim_from_phys[i], dim=self.dim_size[i], spacing=self.dim_spacing[i]))
 
         # todo solve this
         # tmp = self.dim_size[0]
@@ -192,10 +221,13 @@ class Image(object):
                     self.dim_units.append('mm')
                     self.dim_desc.append('spatial')
                     self.dim_label.append('z')
-                    self.z_axis = pars['VisuCorePosition'][:, 2]
-                    self.dim_from_phys = np.append(self.dim_from_phys, self.z_axis[0])
-                    self.dim_to_phys = np.append(self.dim_to_phys, self.z_axis[-1])
-                    self.dim_phys_extent = np.append(self.dim_phys_extent, np.abs(np.subtract(self.z_axis[0], self.z_axis[-1])))
+                    self.axes.append(pars['VisuCorePosition'][:, 2])
+                    self.dim_from_phys = np.append(self.dim_from_phys, self.axes[-1][0])
+                    self.dim_to_phys = np.append(self.dim_to_phys, self.axes[-1][-1])
+                    self.dim_phys_extent = np.append(self.dim_phys_extent, np.abs(np.subtract(self.axes[-1][0], self.axes[-1][-1])))
+                    self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[-1] / self.dim_size[-1])
+
+
 
                 elif pars["VisuFGOrderDesc"][i][1] == "FG_MOVIE":
                     self.dim_size = np.append(self.dim_size, int(pars["VisuFGOrderDesc"][i][0]))
@@ -203,6 +235,9 @@ class Image(object):
                                                     pars["VisuAcqRepetitionTime"] * pars["VisuFGOrderDesc"][i][0])
                     self.dim_from_phys = np.append(self.dim_from_phys, 0.0)
                     self.dim_to_phys = np.append(self.dim_to_phys, self.dim_phys_extent)
+                    self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[i] / self.dim_size[i])
+                    self.axes.append(
+                        self.calc_axis(from_=self.dim_from_phys[i], dim=self.dim_size[i], spacing=self.dim_spacing[i], shift=False))
                     self.dim_units.append('diff_comment')
                     self.diff_comment = np.string_(pars["VisuFGElemComment"])
                     self.dim_desc.append('categorical')
@@ -214,6 +249,9 @@ class Image(object):
                                                     pars["VisuAcqRepetitionTime"] * pars["VisuFGOrderDesc"][i][0])
                     self.dim_from_phys = np.append(self.dim_from_phys, 0.0)
                     self.dim_to_phys = np.append(self.dim_to_phys, self.dim_phys_extent)
+                    self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[i] / self.dim_size[i])
+                    self.axes.append(
+                        self.calc_axis(from_=self.dim_from_phys[i], dim=self.dim_size[i], spacing=self.dim_spacing[i], shift=False))
                     self.dim_units.append('ms')
                     self.dim_desc.append('temporal')
                     self.dim_label.append('time series')
@@ -227,6 +265,9 @@ class Image(object):
                     self.coil_comment = np.empty(shape=(0, 0), dtype=np.string_)
                     for i in range(0, int(pars["VisuFGOrderDesc"][i][0])):
                         self.coil_comment = np.append(self.coil_comment, np.string_('coil {}'.format(i + 1)))
+                    self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[i] / self.dim_size[i])
+                    self.axes.append(
+                        self.calc_axis(from_=self.dim_from_phys[i], dim=self.dim_size[i], spacing=self.dim_spacing[i], shift=False))
                     self.dim_desc.append('categorical')
                     self.dim_label.append('coils')
                 elif pars['VisuFGOrderDesc'][i][1]== 'FG_ISA':
@@ -236,6 +277,9 @@ class Image(object):
                     self.dim_phys_extent = np.append(self.dim_phys_extent, float(pars["VisuFGOrderDesc"][i][0]))
                     self.dim_from_phys = np.append(self.dim_from_phys, 0.0)
                     self.dim_to_phys = np.append(self.dim_to_phys, self.dim_phys_extent)
+                    self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[i] / self.dim_size[i])
+                    self.axes.append(
+                        self.calc_axis(from_=self.dim_from_phys[i], dim=self.dim_size[i], spacing=self.dim_spacing[i], shift=False))
                     self.dim_units.append('')
                     self.dim_desc.append('categorical')
                     self.dim_label.append('maps')
@@ -264,15 +308,19 @@ class Image(object):
 
             self.data = self.data[index] # exctract given map
 
-            # modify parameters
+            # delete reduntant dim parameters
             self.ndim -=1
             self.dim_size = np.delete(self.dim_size, maps_dim_order)
             self.dim_phys_extent = np.delete(self.dim_phys_extent, maps_dim_order)
+            self.dim_from_phys = np.delete(self.dim_from_phys, maps_dim_order)
+            self.dim_to_phys = np.delete(self.dim_to_phys, maps_dim_order)
+            self.dim_spacing = np.delete(self.dim_spacing, maps_dim_order)
+
+            del self.axes[maps_dim_order]
             del self.dim_units[maps_dim_order]
             del self.dim_desc[maps_dim_order]
             del self.dim_label[maps_dim_order]
 
-        self.dim_spacing = self.dim_phys_extent / self.dim_size
 
     def init_from_scan(self, kwargs):
         scan = kwargs['scan']  # reco object just in local scope
@@ -383,15 +431,19 @@ class Image(object):
         # remove singleton dimensions
         self.data = np.squeeze(self.data)
 
-    def init_geometry(self):
-        points = np.rollaxis(np.array(np.meshgrid(self.x_axis, self.y_axis)), 0, 3)
-        self.transverse_plane = np.reshape(points, [points.shape[0] * points.shape[1], points.shape[2]])
+    def calc_axis(self, from_=None, dim=None, spacing=None, shift = True ):
+        # shift is used to place the coordinate into the center of the pixel
+        if shift:
+            shift = spacing / 2.0
+        else:
+            shift = 0.0
 
-        points = np.rollaxis(np.array(np.meshgrid(self.y_axis,self.z_axis)),0,3)
-        self.sagittal_plane = np.reshape(points, [points.shape[0] * points.shape[1], points.shape[2]])
+        axis = np.zeros(dim)
 
-        points = np.rollaxis(np.array(np.meshgrid(self.x_axis, self.z_axis)), 0, 3)
-        self.corronal_plane = np.reshape(points, [points.shape[0] * points.shape[1], points.shape[2]])
+        for i in range(0, dim):
+            axis[i] = from_ + shift + i * spacing
+
+        return axis
 
 
     def __getitem__(self, key):
@@ -423,34 +475,37 @@ class Image(object):
     def get_axes(self, orient=None, ind_phys=None):
         if orient == VIEW_ORIENT.TRANS.value:
             if ind_phys == IND_PHYS.PHYS.value:
-                return self.x_axis, self.y_axis
+                return self.axes[0], self.axes[1]
             else:
-                x_im = self.x_axis.copy()
-                y_im = self.y_axis.copy()
+                x_im = self.axes[0].copy()
+                y_im = self.axes[1].copy()
                 aspect_x = self.aspect[0]
                 aspect_y = self.aspect[0]
         elif orient == VIEW_ORIENT.SAG.value:
             if ind_phys == IND_PHYS.PHYS.value:
-                return self.y_axis, self.z_axis
+                return self.axes[1], self.axes[2]
             else:
-                x_im = self.y_axis.copy()
-                y_im = self.z_axis.copy()
+                x_im = self.axes[1].copy()
+                y_im = self.axes[2].copy()
                 aspect_x = self.aspect[1]
                 aspect_y = self.aspect[2]
         elif orient == VIEW_ORIENT.CORR.value:
             if ind_phys == IND_PHYS.PHYS.value:
-                return self.x_axis, self.z_axis
+                return self.axes[0], self.axes[2]
             else:
-                x_im = self.x_axis.copy()
-                y_im = self.z_axis.copy()
+                x_im = self.axes[0].copy()
+                y_im = self.axes[2].copy()
                 aspect_x = self.aspect[0]
                 aspect_y = self.aspect[2]
 
         x_im -= np.amin(x_im)
         y_im -= np.amin(y_im)
 
-        x_im /= np.amax(x_im)
-        y_im /= np.amax(y_im)
+        if np.amax(x_im) > 0:
+            x_im /= np.amax(x_im)
+
+        if np.amax(y_im) > 0:
+            y_im /= np.amax(y_im)
 
         x_im *= aspect_x
         y_im *= aspect_y

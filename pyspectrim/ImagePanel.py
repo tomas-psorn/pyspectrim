@@ -165,8 +165,9 @@ class ImagePanelMain(ImagePanel):
 
 
     def on_scroll(self, event):
-        zoom_ = 1.0 + 5 / event.delta
-        self.zoom(zoom=zoom_)
+        if event.delta>0:
+            zoom_ = 1.0 + 5 / event.delta
+            self.zoom(zoom=zoom_)
 
     def zoom(self, zoom=None):
         self.space_from *= zoom

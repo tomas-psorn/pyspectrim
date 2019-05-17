@@ -20,13 +20,10 @@ HDF5 part
 
 def getH5Id(object):
     if object.__class__.__name__ == 'FileHdf5':
-        # return object.filename.rsplit('.',1)[0]
         return object.filename
     elif object.__class__.__name__ == 'Group':
-        # return object.file.filename.rsplit('.',1)[0]  + object.name
         return object.file.filename  + object.name
     elif object.__class__.__name__ == 'Dataset':
-        # return object.file.filename.rsplit('.',1)[0]  + object.name
         return object.file.filename  + object.name
 
 def getH5Name(object):
@@ -70,7 +67,6 @@ class FileBruker(object):
         # the path is stored both as a Path object and as a string
         self.filename = Path(path)
         self.file_tree_id = str(self.filename)
-
 
         self.scan_paths = [self.filename / f for f in listdir(self.filename) if not isfile(self.filename / f) and f.isdigit()]
 
