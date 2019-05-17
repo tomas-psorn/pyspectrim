@@ -225,4 +225,31 @@ class ImagePanelMain(ImagePanel):
         self.canvas.itemconfig(self.info_text_id, text=text)
         self.canvas.tag_raise(self.info_text_id)
 
+    def imspace_gridspace(self,x_im,y_im):
+        x = 0
+        y = 0
+        for i in range(0, self.plane_x.shape[1]):
+            if self.plane_x[0, i] > x_im:
+                x=i
+
+        for i in range(0, self.plane_y.shape[0]):
+            if self.plane_y[i, 0] > y_im:
+                y=i
+
+        return x,y
+
+class ImagePanelOrtho(ImagePanel):
+    def __init__(self, **kwargs):
+        super(ImagePanelOrtho, self).__init__(**kwargs)
+
+    def draw_navig_cross(self):
+        image = self.app.contextTabs.get_context_image()
+        # x,y,z = image.get_location_low()
+        # x,y = self.imspace_gridspace(x_im, y_im)
+        # self.horizontal_line = self.canvas.create_line(0, y, self.max_dim, y, fill='blue', width=2)
+        # self.vertical_line = self.canvas.create_line(x,0,x, self.max_dim, fill='blue', width=2)
+
+
+    def draw_horizontal(self, image):
+        pass
 

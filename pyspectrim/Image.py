@@ -43,11 +43,7 @@ class Image(object):
         self.alpha_mask = None
         self._colormap = COLOR_MAP.GRAY.value
 
-        self.min_data = np.amin(self.data)
-        self.max_data = np.amax(self.data)
-
-        self.min_preview = self.min_data
-        self.max_preview = self.max_data
+        self.reset_min_max()
 
         self.reset_enhance()
 
@@ -121,7 +117,6 @@ class Image(object):
             half_spac = self.dim_spacing[i] /2.0
             axis = np.zeros(self.dim_size[i])
             self.axes.append(axis, self.calc_axis())
-
 
     def init_from_reco(self, kwargs):
 
@@ -226,8 +221,21 @@ class Image(object):
                     self.dim_to_phys = np.append(self.dim_to_phys, self.axes[-1][-1])
                     self.dim_phys_extent = np.append(self.dim_phys_extent, np.abs(np.subtract(self.axes[-1][0], self.axes[-1][-1])))
                     self.dim_spacing = np.append(self.dim_spacing, self.dim_phys_extent[-1] / self.dim_size[-1])
+                elif pars["VisuFGOrderDesc"][i][1] == "FG_COMPLEX":
+                    self.ndim -= 1 # it will be removed, but the counter will be implemented
 
+                    position_real = ()
+                    position_imag = ()
 
+                    for j in range(0,len(self.data.shape)):
+                        if j == i + pars['VisuCoreDim']:
+                            position_real += (0,)
+                            position_imag += (1,)
+                        else:
+                            position_real += (slice( 0, self.data.shape[j]),)
+                            position_imag += (slice(0, self.data.shape[j]),)
+
+                    self.data = np.squeeze(self.data[position_real]) + 1j * np.squeeze(self.data[position_imag])
 
                 elif pars["VisuFGOrderDesc"][i][1] == "FG_MOVIE":
                     self.dim_size = np.append(self.dim_size, int(pars["VisuFGOrderDesc"][i][0]))
@@ -320,7 +328,6 @@ class Image(object):
             del self.dim_units[maps_dim_order]
             del self.dim_desc[maps_dim_order]
             del self.dim_label[maps_dim_order]
-
 
     def init_from_scan(self, kwargs):
         scan = kwargs['scan']  # reco object just in local scope
@@ -430,6 +437,33 @@ class Image(object):
 
         # remove singleton dimensions
         self.data = np.squeeze(self.data)
+
+    def reset_min_max(self):
+        self.min_data = np.zeros((4,))
+        self.max_data = np.zeros((4,))
+
+        if self.data.dtype == np.complex:
+            self.min_data[0] = np.amin(np.abs(self.data))
+            self.min_data[1] = np.amin(np.angle(self.data))
+            self.min_data[2] = np.amin(np.real(self.data))
+            self.min_data[3] = np.amin(np.imag(self.data))
+
+            self.max_data[0] = np.max(np.abs(self.data))
+            self.max_data[1] = np.max(np.angle(self.data))
+            self.max_data[2] = np.max(np.real(self.data))
+            self.max_data[3] = np.max(np.imag(self.data))
+
+        else:
+            self.min_data[0] = np.amin(np.abs(self.data))
+            self.min_data[1:3] = 0.0
+
+            self.max_data[0] = np.max(np.abs(self.data))
+            self.max_data[1:3] = 0.0
+
+        self.min_preview = self.min_data
+        self.max_preview = self.max_data
+
+
 
     def calc_axis(self, from_=None, dim=None, spacing=None, shift = True ):
         # shift is used to place the coordinate into the center of the pixel

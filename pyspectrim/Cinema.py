@@ -1,4 +1,4 @@
-from pyspectrim.ImagePanel import ImagePanelMain, ImagePanel
+from pyspectrim.ImagePanel import ImagePanelMain, ImagePanel, ImagePanelOrtho
 from pyspectrim.SignalPanel import SignalPanel
 from pyspectrim.enums import *
 import tkinter as tk
@@ -22,9 +22,9 @@ class Cinema(tk.Frame):
         self.image_panel_max_dim = 402
 
         self.image_panel_main = ImagePanelMain(cinema=self, max_dim=self.image_panel_max_dim, frame=self.image_frame)
-        self.image_panel_trans = ImagePanel(cinema=self, max_dim=int(self.image_panel_max_dim/3), frame=self.trans_frame, fix_orient=VIEW_ORIENT.TRANS.value)
-        self.image_panel_sag = ImagePanel(cinema=self, max_dim=int(self.image_panel_max_dim/3), frame=self.sag_frame, fix_orient=VIEW_ORIENT.SAG.value)
-        self.image_panel_cor = ImagePanel(cinema=self, max_dim=int(self.image_panel_max_dim/3), frame=self.cor_frame, fix_orient=VIEW_ORIENT.CORR.value)
+        self.image_panel_trans = ImagePanelOrtho(cinema=self, max_dim=int(self.image_panel_max_dim/3), frame=self.trans_frame, fix_orient=VIEW_ORIENT.TRANS.value)
+        self.image_panel_sag = ImagePanelOrtho(cinema=self, max_dim=int(self.image_panel_max_dim/3), frame=self.sag_frame, fix_orient=VIEW_ORIENT.SAG.value)
+        self.image_panel_cor = ImagePanelOrtho(cinema=self, max_dim=int(self.image_panel_max_dim/3), frame=self.cor_frame, fix_orient=VIEW_ORIENT.CORR.value)
 
         self.trans_frame.grid(row=0)
         self.sag_frame.grid(row=1)
@@ -46,8 +46,11 @@ class Cinema(tk.Frame):
             self.image_panel_main.draw()
         if ortho:
             self.image_panel_trans.draw()
+            # self.image_panel_trans.draw_navig_cross()
             self.image_panel_sag.draw()
+            # self.image_panel_sag.draw_navig_cross()
             self.image_panel_cor.draw()
+            # self.image_panel_cor.draw_navig_cross()
         if signal:
             self.signal_panel.draw()
 
