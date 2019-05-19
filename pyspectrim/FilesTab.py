@@ -185,7 +185,11 @@ class FilesTab(tk.Frame):
             for reco_path in reco_paths:
                 reco = Reco(path=scan_path / 'pdata' / reco_path, read2dseq=False)
 
+                if not reco.isVisu:
+                    return
+
                 reco_tree_id = reco.path._str
+
 
                 if reco.visu_pars['VisuSeriesTypeId'] == 'DERIVED_ISA':
                     for i in range(0,reco.visu_pars['VisuFGOrderDescDim']):

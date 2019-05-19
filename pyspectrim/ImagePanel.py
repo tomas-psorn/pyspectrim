@@ -165,9 +165,10 @@ class ImagePanelMain(ImagePanel):
 
 
     def on_scroll(self, event):
-        if event.delta>0:
-            zoom_ = 1.0 + 5 / event.delta
-            self.zoom(zoom=zoom_)
+        if event.delta > 0:
+            self.zoom(zoom=1.1)
+        elif event.delta < 0:
+            self.zoom(zoom=0.9)
 
     def zoom(self, zoom=None):
         self.space_from *= zoom
@@ -183,27 +184,27 @@ class ImagePanelMain(ImagePanel):
         self.drag_start_y = event.y
 
     def on_drag(self, event):
-        diff_x = (self.drag_start_y - event.y) / self.max_dim
-        diff_y = (self.drag_start_x - event.x) / self.max_dim
+        # diff_x = (self.drag_start_x - event.x)
+        # diff_y = (self.drag_start_y - event.y)
+        spacing = (self.plane_x[0,1] - self.plane_x[0,0])
 
-        orient = self.app.contextTabs.imageViewTab.view_orient_switch.get()
+        print(spacing)
 
-        if orient == VIEW_ORIENT.TRANS.value:
-            self.pane(x=diff_x, y=diff_y, z=0.0)
-        elif orient == VIEW_ORIENT.SAG.value:
-            self.pane(x=0.0, y=diff_x, z=diff_y)
-        elif orient == VIEW_ORIENT.TRANS.value:
-            self.pane(x=diff_x, y=0.0, z=diff_y)
+        self.pane(x=event.x, y=event.y)
 
-    def pane(self, x=None, y=None, z=None):
+
+    def pane(self, x=None, y=None):
         self.space_from[0] += x
         self.space_from[1] += y
 
         self.space_to[0] += x
         self.space_to[1] += y
 
-        self.plane_x += x
-        self.plane_y += y
+        for i in range(0,self.max_dim):
+            self.plane_x[i,:] += x
+
+        # self.plane_x += x
+        # self.plane_y += y
         self.draw()
 
     def update_info(self, x=None, y=None):

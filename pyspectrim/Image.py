@@ -595,10 +595,10 @@ class Image(object):
             if kwargs['orient'] == VIEW_ORIENT.TRANS.value:
                 alpha = np.transpose(alpha, (1, 0))
 
-            alpha = interpolate.interpn((x_im, y_im), alpha, q, method='nearest', bounds_error=False, fill_value=0.0)
+            alpha = interpolate.interpn((x_im, y_im), alpha, q, method='linear', bounds_error=False, fill_value=0.0)
             alpha = 255.0*alpha
 
-        frame = interpolate.interpn((x_im,y_im), frame, q, method='nearest', bounds_error=False, fill_value =0.0  )
+        frame = interpolate.interpn((x_im,y_im), frame, q, method='linear', bounds_error=False, fill_value =min_preview  )
 
         # if enhance:
         #     frame = self.apply_enhance_(frame=frame)
