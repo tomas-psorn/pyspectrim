@@ -692,28 +692,26 @@ class Image(object):
         else:
             return "False"
 
-    # Image manipulation
-    def enhance_preview(self,frame):
-        clip_stretch_switch = self.app.contextTabs.imageViewTab.contrastEnhance.clip_stretch_var.get()
-        if clip_stretch_switch is True:
-            return np.clip(frame,self.min_preview,self.max_preview)
-        else:
-            range_data = self.max_data - self.min_data
-            range_preview = self.max_preview - self.min_preview
-            return self.min_preview + (range_preview * (frame - self.min_data) / range_data)
-
-    def enhance_data(self, log=False, pow=False, window=False, **kwargs):
+    def enhance_data(self, log=False, pow=False, **kwargs):
         if log:
-            self.data = np.log(self.data)
-            self.reset_min_max_()
-            self.app.cinema.draw()
+            if 'complex' in self.data.dtype.name:
+                magnitude = np.abs(self.data)
+                phase = np.angle(self.data)
+                magnitude = np.log(magnitude)
+                self.data = magnitude * np.exp(-1j*phase)
+            else:
+                self.data = np.log(self.data)
         elif pow:
-            self.data = np.power(self.data,kwargs['pow_coef'])
-            self.reset_min_max_()
-            self.app.cinema.draw()
-        elif window:
-            pass
+            if 'complex' in self.data.dtype.name:
+                magnitude = np.abs(self.data)
+                phase = np.angle(self.data)
+                magnitude = np.log(magnitude)
+                self.data = magnitude * np.exp(-1j*phase)
+            else:
+                self.data = np.power(self.data,kwargs['pow_coef'])
 
+        self.reset_min_max_()
+        self.app.cinema.draw()
 
     def frame_to_0_255(self, frame=None, min_ = None, max_=None):
         range = max_ - min_
@@ -730,24 +728,20 @@ class Image(object):
     def resize(self,frame, export_size):
         return cv2.resize(frame, export_size, interpolation=cv2.INTER_LINEAR)
 
-    def hist_norm(self):
-        # num_bins = int(np.log(np.prod(self.dim_size)))
+    def hist_eq(self):
         num_bins = 256
-        data = self.data
-        imhist, bins= np.histogram(data.flatten(), num_bins, normed=True)
-        cdf = imhist.cumsum()  # cumulative distribution function
+
+        data_ = self.data.copy().flatten()
+
+        image_histogram, bins = np.histogram(data_, num_bins, density=True)
+        cdf = image_histogram.cumsum()  # cumulative distribution function
         cdf = 255 * cdf / cdf[-1]  # normalize
 
         # use linear interpolation of cdf to find new pixel values
-        data_= np.interp(data.flatten(), bins[:-1], cdf)
-
-        self.data = data_.reshape(data.shape)
-
-        self.min_data = np.amin(self.data)
-        self.max_data = np.amax(self.data)
-
-        self.min_preview = self.min_data
-        self.max_preview = self.max_data
+        data_ = np.interp(data_, bins[:-1], cdf)
+        self.data = np.reshape(data_, self.data.shape)
+        self.reset_min_max_()
+        self.app.cinema.draw()
 
     def apply_enhance(self):
         clip_stretch_switch = self.app.contextTabs.imageViewTab.contrastEnhance.clip_stretch_var.get()

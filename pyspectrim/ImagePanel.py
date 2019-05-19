@@ -65,7 +65,7 @@ class ImagePanel():
                 self.space_to[0] = 0.5
                 self.space_to[1] = 0.5
             else :
-                max_ext_ind = np.where(image.dim_phys_extent == np.amax(image.dim_phys_extent))
+                max_ext_ind = np.where(image.dim_phys_extent == np.amax(image.dim_phys_extent[0:3]))
 
                 self.space_from[0] = image.dim_from_phys[max_ext_ind]
                 self.space_from[1] = image.dim_from_phys[max_ext_ind]
@@ -247,8 +247,8 @@ class ImagePanelOrtho(ImagePanel):
         image = self.app.contextTabs.get_context_image()
         # x,y,z = image.get_location_low()
         # x,y = self.imspace_gridspace(x_im, y_im)
-        # self.horizontal_line = self.canvas.create_line(0, y, self.max_dim, y, fill='blue', width=2)
-        # self.vertical_line = self.canvas.create_line(x,0,x, self.max_dim, fill='blue', width=2)
+        self.horizontal_line = self.canvas.create_line(0, self.max_dim/2, self.max_dim, self.max_dim/2, fill='blue', width=2)
+        self.vertical_line = self.canvas.create_line(self.max_dim/2,0,self.max_dim/2, self.max_dim, fill='blue', width=2)
 
 
     def draw_horizontal(self, image):

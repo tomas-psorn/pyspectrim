@@ -16,8 +16,8 @@ class PySpectrim():
     def __init__(self):
 
         self.root = tk.Tk()
-        self.root.title("PySpectrim")
-        self.root.geometry("%dx%d+0+0" % (self.root.winfo_screenwidth(), self.root.winfo_screenheight()))
+        self.root.title("pySigIm")
+        self.root.geometry("%dx%d+0+0" % (self.root.winfo_screenwidth()-200, self.root.winfo_screenheight()-200))
 
         # Init main elements
         self.contentTabs = ContentTabs(self)

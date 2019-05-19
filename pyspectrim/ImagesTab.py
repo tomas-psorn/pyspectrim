@@ -204,7 +204,7 @@ class ImagesTab(tk.Frame):
     def reload_image_data(self):
         image = self.clicked_on_image
         image.reload_data()
-        self.app.contextTabs.update_context(image=image)
+        self.app.contextTabs.set_context_image(image=image)
         self.app.cinema.draw()
 
         self.clicked_on_image = None

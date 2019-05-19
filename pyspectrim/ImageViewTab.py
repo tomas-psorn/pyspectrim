@@ -9,6 +9,8 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
+import numpy as np
+
 from pyspectrim.enums import *
 
 class ImageViewTab(tk.Frame):
@@ -323,10 +325,15 @@ class EnhanceWindow():
 
     def init_hist(self):
 
+        if 'complex' in self.image.data.dtype.name:
+            data = np.abs(self.image.data)
+        else:
+            data = self.image.data
+
         self.hist_fig = Figure(figsize=(2, 2), dpi=100)
 
         ax = self.hist_fig.add_subplot(111)
-        n, bins, patches = ax.hist(self.image.data.flatten(), 250, density=False, label='data')
+        n, bins, patches = ax.hist(data.flatten(), 250, density=False, label='data')
         n, bins, patches = ax.hist(self.app.cinema.image_panel_main.get_frame(image=self.image).flatten(), 50, density=False, label='frame')
         # ax.legend(loc='upper right')
 
@@ -368,7 +375,7 @@ class EnhanceWindow():
 
 
     def hist_eq(self):
-        pass
+        self.image.hist_eq()
 
 class ComplexPartSwitch():
     def __init__(self, tab):

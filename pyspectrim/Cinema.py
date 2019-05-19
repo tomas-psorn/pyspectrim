@@ -46,11 +46,11 @@ class Cinema(tk.Frame):
             self.image_panel_main.draw()
         if ortho:
             self.image_panel_trans.draw()
-            # self.image_panel_trans.draw_navig_cross()
+            self.image_panel_trans.draw_navig_cross()
             self.image_panel_sag.draw()
-            # self.image_panel_sag.draw_navig_cross()
+            self.image_panel_sag.draw_navig_cross()
             self.image_panel_cor.draw()
-            # self.image_panel_cor.draw_navig_cross()
+            self.image_panel_cor.draw_navig_cross()
         if signal:
             self.signal_panel.draw()
 
