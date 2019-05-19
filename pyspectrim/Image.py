@@ -60,14 +60,14 @@ class Image(object):
 
         # dim_from
         try:
-            dim_from = dataset.attrs['dim_from']
+            dim_from = np.array(dataset.attrs['dim_from'])
         except:
             dim_from = np.zeros(shape=(self.ndim,))
         self.dim_from_phys = dim_from
 
         # dim_label
         try:
-            dim_label = dataset.attrs['dim_label']
+            dim_label = dataset.attrs['dim_label'].decode("utf-8").split(',')
         except:
             dim_label = ['x', 'y', 'z']
             for i in range(0, self.ndim - 3):
@@ -76,7 +76,7 @@ class Image(object):
 
         # dim_desc
         try:
-            dim_desc = dataset.attrs['dim_desc']
+            dim_desc = dataset.attrs['dim_desc'].decode("utf-8").split(',')
         except:
             dim_desc = ['spatial', 'spatial', 'spatial']
             for i in range(0, self.ndim - 3):
@@ -85,14 +85,14 @@ class Image(object):
 
         # dim_extent
         try:
-            dim_extent = dataset.attrs['dim_extent']
+            dim_extent = np.array(dataset.attrs['dim_extent'])
         except:
             dim_extent = self.dim_size.astype(float)
         self.dim_phys_extent = dim_extent
 
         # dim_units
         try:
-            dim_units =  dataset.attrs['dim_units']
+            dim_units =  dataset.attrs['dim_units'].decode("utf-8").split(',')
         except:
             dim_units = []
             for i in range(0, self.ndim):
@@ -101,7 +101,7 @@ class Image(object):
 
         # data_units
         try:
-            data_units =  dataset.attrs['data_units']
+            data_units =  dataset.attrs['data_units'].decode("utf-8")
         except:
             data_units = None
         self.data_units = data_units
