@@ -10,8 +10,6 @@ from os import listdir
 
 class FilesTab(tk.Frame):
 
-
-
     def __init__(self, contentTabs):
 
         self.filesList = []
