@@ -281,38 +281,38 @@ class EnhanceWindow():
         self.image = image
         self.enhance_window = tk.Tk()
         self.enhance_window.wm_title("Enhance")
-        self.enhance_window.geometry('400x600')
+        self.enhance_window.geometry('600x300')
+        self.enhance_window.protocol("WM_DELETE_WINDOW", self.on_exit)
 
-        self.hist_frame = tk.Frame(self.enhance_window)
-        self.options_frame = tk.Frame(self.enhance_window)
 
-        self.hist_fig = Figure(figsize=(5, 4), dpi=100)
 
-        ax = self.hist_fig.add_subplot(111)
-        n, bins, patches = ax.hist(image.data.flatten(), 250, density=False, label='data')
-        n, bins, patches = ax.hist(self.app.cinema.image_panel_main.get_frame(image=image).flatten(), 50, density=False, label='frame')
-        # ax.legend(loc='upper right')
+        self.hist_frame = tk.LabelFrame(self.enhance_window, text='Histogram')
+        self.options_frame=tk.Frame(self.enhance_window)
 
-        self.pow_frame = tk.LabelFrame(self.options_frame, text='Power')
-        self.pow_coef_val = tk.StringVar()
-        self.pow_coef_val.set('1.0')
-        self.pow_coef_entry = tk.Entry(self.pow_frame, textvariable=self.pow_coef_val)
-        self.apply_button = tk.Button(self.pow_frame, text="Apply to preview", command=self.set_enhance)
-        self.pow_coef_entry.grid(row=0, column=0)
-        self.apply_button.grid(row=0, column=1)
-        self.pow_frame.pack()
+        self.window_frame = tk.LabelFrame(self.options_frame, text='Windowing')
+        self.pow_frame = tk.LabelFrame(self.options_frame, text='Power scaling')
+        self.log_frame = tk.LabelFrame(self.options_frame, text='Logarithmic  scaling')
+        self.hist_eq_frame = tk.LabelFrame(self.options_frame, text='Normalize histogram')
 
-        self.log_frame = tk.LabelFrame(self.options_frame, text='Logarithm')
+        self.init_hist()
+        self.init_log()
+        self.init_pow()
+        self.init_hist_eq()
 
-        self.canvas = FigureCanvasTkAgg(self.hist_fig, master=self.hist_frame)
-        self.canvas.get_tk_widget().pack()
-        self.canvas.draw()
+        self.hist_frame.grid(row=0, column=0)
+        self.options_frame.grid(row=0, column=1)
 
-        self.hist_frame.pack()
-        self.options_frame.pack()
+        self.window_frame.pack(fill=tk.X)
+        self.pow_frame.pack(fill=tk.X)
+        self.log_frame.pack(fill=tk.X)
+        self.hist_eq_frame.pack(fill=tk.X)
 
-        self.done_button = tk.Button(self.enhance_window, text="Okay", command=self.enhance_window.destroy)
-        self.done_button.pack()
+        # self.done_button = tk.Button(self.enhance_window, text="Okay", command=self.enhance_window.destroy)
+        # self.done_button.pack()
+
+    def on_exit(self):
+        self.image = None
+        self.enhance_window.destroy()
 
     def set_enhance(self):
         if float(self.pow_coef_entry.get()) != 1.0:
@@ -320,6 +320,55 @@ class EnhanceWindow():
 
         self.app.cinema.draw()
         self.app.cinema.image_panel_main.update_info()
+
+    def init_hist(self):
+
+        self.hist_fig = Figure(figsize=(2, 2), dpi=100)
+
+        ax = self.hist_fig.add_subplot(111)
+        n, bins, patches = ax.hist(self.image.data.flatten(), 250, density=False, label='data')
+        n, bins, patches = ax.hist(self.app.cinema.image_panel_main.get_frame(image=self.image).flatten(), 50, density=False, label='frame')
+        # ax.legend(loc='upper right')
+
+        self.canvas = FigureCanvasTkAgg(self.hist_fig, master=self.hist_frame)
+        self.canvas.get_tk_widget().pack()
+        self.canvas.draw()
+
+    def init_pow(self):
+        self.pow_coef_entry = tk.Entry(self.pow_frame)
+        self.pow_coef_entry.insert(tk.END, '1.0')
+        self.apply_prew_button = tk.Button(self.pow_frame, text="Apply to preview", command=self.set_pow_prew)
+        self.apply_data_button = tk.Button(self.pow_frame, text="Apply to data", command=self.set_pow_data)
+        self.pow_coef_entry.grid(row=0, column=0)
+        self.apply_prew_button.grid(row=0, column=1)
+        self.apply_data_button.grid(row=0, column=2)
+
+    def init_log(self):
+        self.apply_prew_button = tk.Button(self.log_frame, text="Apply to preview", command=self.set_log_prew)
+        self.apply_data_button = tk.Button(self.log_frame, text="Apply to data", command=self.set_log_data)
+        self.apply_prew_button.grid(row=0, column=0)
+        self.apply_data_button.grid(row=0, column=1)
+
+    def init_hist_eq(self):
+        self.apply_hist_eq_button = tk.Button(self.hist_eq_frame, text="Equalize histogram", command=self.hist_eq)
+        self.apply_hist_eq_button.grid(row=0, column=0)
+
+    def set_pow_prew(self):
+        pass
+
+    def set_pow_data(self):
+        self.image.enhance_data(pow=True, pow_coef=float(self.pow_coef_entry.get()))
+
+    def set_log_prew(self):
+        pass
+
+    def set_log_data(self):
+        self.image.enhance_data(log=True)
+
+
+
+    def hist_eq(self):
+        pass
 
 class ComplexPartSwitch():
     def __init__(self, tab):

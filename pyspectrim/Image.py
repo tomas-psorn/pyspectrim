@@ -693,7 +693,7 @@ class Image(object):
             return "False"
 
     # Image manipulation
-    def apply_preview(self,frame):
+    def enhance_preview(self,frame):
         clip_stretch_switch = self.app.contextTabs.imageViewTab.contrastEnhance.clip_stretch_var.get()
         if clip_stretch_switch is True:
             return np.clip(frame,self.min_preview,self.max_preview)
@@ -701,6 +701,19 @@ class Image(object):
             range_data = self.max_data - self.min_data
             range_preview = self.max_preview - self.min_preview
             return self.min_preview + (range_preview * (frame - self.min_data) / range_data)
+
+    def enhance_data(self, log=False, pow=False, window=False, **kwargs):
+        if log:
+            self.data = np.log(self.data)
+            self.reset_min_max_()
+            self.app.cinema.draw()
+        elif pow:
+            self.data = np.power(self.data,kwargs['pow_coef'])
+            self.reset_min_max_()
+            self.app.cinema.draw()
+        elif window:
+            pass
+
 
     def frame_to_0_255(self, frame=None, min_ = None, max_=None):
         range = max_ - min_
